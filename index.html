@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip Planner</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">PLAN • DRAG • GO</p>
+      <h1>✈ Trip Planner</h1>
+      <p class="subtitle">Sắp xếp chuyến đi theo cách của bạn.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn secondary" id="resetBtn">Tạo chuyến mới</button>
+      <button class="btn outline" id="excelBtn">Xuất Excel</button>
+      <button class="btn primary" id="pdfBtn">Xuất PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="trip-setup card">
+      <div class="section-title">
+        <div>
+          <span class="mini-label">THÔNG TIN CHUYẾN ĐI</span>
+          <h2>Lên lịch cho chuyến đi</h2>
+        </div>
+        <div class="trip-badge" id="tripBadge">Chưa tạo lịch</div>
+      </div>
+
+      <div class="setup-grid">
+        <label>Tên chuyến đi
+          <input id="tripName" type="text" value="Đà Lạt Trip" placeholder="Ví dụ: Đà Lạt Trip">
+        </label>
+        <label>Ngày bắt đầu
+          <input id="startDate" type="date" value="2026-04-13">
+        </label>
+        <label>Ngày kết thúc
+          <input id="endDate" type="date" value="2026-04-16">
+        </label>
+        <label>Số người
+          <input id="people" type="number" min="1" value="4">
+        </label>
+        <button class="btn primary create-trip" id="createTripBtn">Tạo / cập nhật lịch</button>
+      </div>
+    </section>
+
+    <section class="planner-shell">
+      <aside class="unscheduled card">
+        <div class="sidebar-head">
+          <div>
+            <span class="mini-label">PLACE BANK</span>
+            <h2>Địa điểm chưa xếp</h2>
+          </div>
+          <span class="count" id="unscheduledCount">0</span>
+        </div>
+        <button class="btn add-place" id="addPlaceBtn">＋ Thêm địa điểm</button>
+        <p class="hint">Kéo card sang bất kỳ ngày nào. Thả card về đây để bỏ khỏi lịch.</p>
+        <div class="drop-list" id="unscheduledList" data-date=""></div>
+      </aside>
+
+      <section class="days-area">
+        <div class="days-toolbar">
+          <div>
+            <span class="mini-label">LỊCH TRÌNH</span>
+            <h2 id="plannerTitle">Các ngày của chuyến đi</h2>
+          </div>
+          <p>← Kéo ngang để xem tất cả ngày →</p>
+        </div>
+        <div class="days-scroll" id="daysContainer"></div>
+      </section>
+    </section>
+
+    <section class="summary card">
+      <div>
+        <span class="mini-label">TRIP SUMMARY</span>
+        <h2>Tổng quan chi phí</h2>
+      </div>
+      <div class="summary-stats">
+        <div><span>Địa điểm</span><strong id="placeTotal">0</strong></div>
+        <div><span>Đã xếp</span><strong id="scheduledTotal">0</strong></div>
+        <div><span>Tổng chi phí</span><strong id="costTotal">0 ₫</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="placeModal">
+    <div class="modal-panel">
+      <button class="modal-close" id="closeModalBtn">×</button>
+      <p class="mini-label">PLACE DETAILS</p>
+      <h2 id="modalTitle">Thêm địa điểm</h2>
+      <form id="placeForm">
+        <input type="hidden" id="placeId">
+        <div class="form-grid">
+          <label class="wide">Tên địa điểm *
+            <input id="placeName" required placeholder="Ví dụ: Mongo Land">
+          </label>
+          <label>Nội dung
+            <select id="placeCategory">
+              <option>Tham quan</option><option>Ăn uống</option><option>Cà phê</option>
+              <option>Check-in</option><option>Di chuyển</option><option>Khách sạn</option>
+              <option>Thuê đồ</option><option>Mua sắm</option><option>Nghỉ ngơi</option><option>Khác</option>
+            </select>
+          </label>
+          <label>Chi phí (VND)
+            <input id="placeCost" type="number" min="0" value="0">
+          </label>
+          <label class="wide">Địa chỉ
+            <input id="placeAddress" placeholder="Địa chỉ địa điểm">
+          </label>
+          <label class="wide">Ghi chú / menu / hoạt động
+            <textarea id="placeNotes" rows="3" placeholder="Menu, hoạt động, lưu ý..."></textarea>
+          </label>
+          <label class="wide">Google Maps / Link
+            <input id="placeMap" type="url" placeholder="https://maps.app.goo.gl/...">
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" id="cancelModalBtn">Hủy</button>
+          <button type="submit" class="btn primary">Lưu địa điểm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="timeModal">
+    <div class="modal-panel time-panel">
+      <button class="modal-close" id="closeTimeBtn">×</button>
+      <p class="mini-label">SCHEDULE</p>
+      <h2>Chọn thời gian</h2>
+      <p id="timePlaceName" class="time-place"></p>
+      <label>Thời gian
+        <input id="scheduleTime" type="time" value="09:00">
+      </label>
+      <div class="modal-actions">
+        <button class="btn secondary" id="cancelTimeBtn">Hủy</button>
+        <button class="btn primary" id="confirmTimeBtn">Xếp lịch</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="javascript/script.js"></script>
+</body>
+</html>
