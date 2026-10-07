@@ -4446,3 +4446,68 @@ a.map-link:hover {
 #endDate {
     width: 250x;
 }
+
+/* =========================================
+   PLACE CARD COLORS BY CATEGORY
+========================================= */
+
+/* Mặc định */
+.place-card {
+    --category-color: #BF5079;
+
+    background: white;
+    border-left: 6px solid var(--category-color);
+}
+
+/* Tên category */
+.place-card .place-category {
+    color: var(--category-color);
+}
+
+
+/* ☕ Cà phê */
+.place-card[data-category="Cà phê"] {
+    --category-color: #A66A4C;
+}
+
+
+/* 🍜 Ăn uống */
+.place-card[data-category="Ăn uống"] {
+    --category-color: #E06B65;
+}
+
+
+/* 📸 Check-in */
+.place-card[data-category="Check-in"] {
+    --category-color: #BF5079;
+}
+
+
+/* 🌿 Tham quan */
+.place-card[data-category="Tham quan"] {
+    --category-color: #54A878;
+}
+
+
+/* 🎡 Vui chơi */
+.place-card[data-category="Vui chơi"] {
+    --category-color: #8B72C8;
+}
+
+
+/* 🛍 Mua sắm */
+.place-card[data-category="Mua sắm"] {
+    --category-color: #D69A3A;
+}
+
+
+/* 🏨 Khách sạn */
+.place-card[data-category="Khách sạn"] {
+    --category-color: #4F8FBF;
+}
+
+
+/* 🚗 Di chuyển */
+.place-card[data-category="Di chuyển"] {
+    --category-color: #607D8B;
+}

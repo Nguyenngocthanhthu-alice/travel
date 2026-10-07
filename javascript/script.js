@@ -828,7 +828,12 @@ function render() {
 
 function placeCard(place) {
     return `
-        <div class="place-card" draggable="true" data-id="${esc(place.id)}">
+        <div
+    class="place-card"
+    draggable="true"
+    data-id="${place.id}"
+    data-category="${esc(place.category || '')}"
+>
 
             <div class="place-top">
                 <div>
