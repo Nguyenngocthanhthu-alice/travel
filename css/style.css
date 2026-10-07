@@ -4511,3 +4511,22 @@ a.map-link:hover {
 .place-card[data-category="Di chuyển"] {
     --category-color: #607D8B;
 }
+
+.place-time-btn {
+    border: none;
+    background: #f2f7f3;
+    color: #2C5951;
+    font: inherit;
+    font-weight: 800;
+    padding: 5px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.place-time-btn:hover {
+    background: #dfece3;
+}
+
+.place-time-btn:active {
+    transform: scale(0.90);
+}

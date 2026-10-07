@@ -841,8 +841,17 @@ function placeCard(place) {
                     <div class="category">${esc(place.category)}</div>
                 </div>
 
-                ${place.time ? `<span class="time-chip">${esc(place.time)}</span>` : ''}
-            </div>
+${place.date && place.time ? `
+    <button
+        type="button"
+        class="place-time-btn"
+        data-place-action="time"
+        data-place-id="${place.id}"
+        title="Chỉnh sửa giờ"
+    >
+        🕐 ${esc(place.time)}
+    </button>
+` : ''}            </div>
 
             <div class="place-meta">
                 ${place.address ? `📍 ${esc(place.address)}<br>` : ''}
@@ -1005,6 +1014,26 @@ function unschedulePlace(id) {
     toast(`Đã bỏ lịch • Địa điểm vẫn còn trong Place Bank • ${remainingBudgetText()}`);
 }
 
+function editPlaceTime(id) {
+    const place = state.places.find(item => item.id === id);
+
+    if (!place || !place.date) return;
+
+    pendingDrop = {
+        id: place.id,
+        date: place.date
+    };
+
+    if ($('timePlaceName')) {
+        $('timePlaceName').textContent = place.name;
+    }
+
+    if ($('scheduleTime')) {
+        $('scheduleTime').value = place.time || '09:00';
+    }
+
+    $('timeModal')?.classList.remove('hidden');
+}
 function deletePlaceById(id) {
     const place = find(id);
     if (!place) return;
@@ -1232,6 +1261,7 @@ function bindStaticEvents() {
         if (action === 'duplicate') duplicatePlace(id);
         if (action === 'unschedule') unschedulePlace(id);
         if (action === 'delete') deletePlaceById(id);
+        if (action === 'time') editPlaceTime(id);
     });
 
     $('addPlaceBtn')?.addEventListener('click', () => openPlaceModal());
@@ -1352,31 +1382,58 @@ function bindStaticEvents() {
     $('closeTimeBtn')?.addEventListener('click', cancelTime);
     $('cancelTimeBtn')?.addEventListener('click', cancelTime);
 
-    $('confirmTimeBtn')?.addEventListener('click', () => {
-        if (!pendingDrop) return;
+   $('confirmTimeBtn')?.addEventListener('click', () => {
+    if (!pendingDrop) return;
 
-        const source = find(pendingDrop.id);
-        const existing = state.places.find(place => place.id === pendingDrop.id);
+    const selectedTime = $('scheduleTime')?.value || '09:00';
 
-        if (source) {
-            if (existing) {
-                existing.date = pendingDrop.date;
-                existing.time = $('scheduleTime')?.value || '09:00';
-            } else {
-                state.places.push({
-                    ...placeTemplate(source),
-                    date: pendingDrop.date,
-                    time: $('scheduleTime')?.value || '09:00'
-                });
-            }
+    // Check if another place already uses this time on the same day
+    const conflict = state.places.find(place =>
+        place.date === pendingDrop.date &&
+        place.time === selectedTime &&
+        place.id !== pendingDrop.id
+    );
+
+    if (conflict) {
+        alert(
+            `Khung giờ ${selectedTime} đã được sử dụng!\n\n` +
+            `📍 ${conflict.name}\n` +
+            `Vui lòng chọn giờ khác.`
+        );
+
+        return;
+    }
+
+    const source = find(pendingDrop.id);
+    const existing = state.places.find(
+        place => place.id === pendingDrop.id
+    );
+
+    if (source) {
+        if (existing) {
+            // Editing an existing scheduled place
+            existing.date = pendingDrop.date;
+            existing.time = selectedTime;
+        } else {
+            // Adding a place from Place Bank
+            state.places.push({
+                ...placeTemplate(source),
+                date: pendingDrop.date,
+                time: selectedTime
+            });
         }
+    }
 
-        pendingDrop = null;
-        $('timeModal')?.classList.add('hidden');
+    pendingDrop = null;
 
-        render();
-        toast(`Đã xếp lịch • ${remainingBudgetText()}`);
-    });
+    $('timeModal')?.classList.add('hidden');
+
+    render();
+
+    toast(
+        `Đã xếp lịch lúc ${selectedTime} • ${remainingBudgetText()}`
+    );
+});
 
     $('createTripBtn')?.addEventListener('click', updateTripFromForm);
 
