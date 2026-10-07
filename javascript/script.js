@@ -1,1128 +1,1720 @@
+// Firebase + Firestore online sync
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc,
+  onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpNrt6vuF7wlc4LiUpDTqADKjSgT57Zcw",
+  authDomain: "alice-trip-planner.firebaseapp.com",
+  projectId: "alice-trip-planner",
+  storageBucket: "alice-trip-planner.firebasestorage.app",
+  messagingSenderId: "872286083995",
+  appId: "1:872286083995:web:7e2b2a97b433a1be421f3e",
+  measurementId: "G-6JMN169DN7"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+
+let firebaseReady = false;
+let unsubscribeTrips = null;
+let remoteTrips = [];
+let suppressRemoteWrite = false;
+
+async function ensureFirebaseAuth() {
+  if (auth.currentUser) {
+    firebaseReady = true;
+    return auth.currentUser;
+  }
+  const result = await signInAnonymously(auth);
+  firebaseReady = true;
+  return result.user;
+}
+
+function startTripsSync() {
+  if (unsubscribeTrips) unsubscribeTrips();
+
+  unsubscribeTrips = onSnapshot(
+    collection(db, "trips"),
+    (snapshot) => {
+      remoteTrips = snapshot.docs.map(d => {
+        const data = d.data() || {};
+        return {
+          id: d.id,
+          trip: data.trip || {},
+          places: Array.isArray(data.places) ? data.places : [],
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || ""
+        };
+      });
+
+      // Keep a local cache so the app still has something to show if needed.
+      localStorage.setItem(TRIPS_STORAGE_KEY, JSON.stringify(remoteTrips));
+      renderSavedTrips();
+    },
+    (error) => {
+      console.error("Firestore sync error:", error);
+      toast("Không thể đồng bộ Firebase. Kiểm tra Firestore Rules.");
+    }
+  );
+}
+
+/* =========================================================
+   TRIP PLANNER
+   - Multiple saved trips
+   - Drag & drop itinerary
+   - Food / cafe menu with automatic total
+   - Excel export
+   - PDF export: one day per page
+========================================================= */
+
 const STORAGE_KEY = 'pinkGreenTripPlannerV1';
 const TRIPS_STORAGE_KEY = 'tripPlannerTrips';
+
 let currentTripId = null;
+let pendingDrop = null;
+let currentMenu = [];
+
+function uid() {
+    return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function money(n) {
+    return Number(n || 0).toLocaleString('vi-VN') + ' ₫';
+}
+
+function esc(s = '') {
+    return String(s).replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[m]));
+}
+
+function localDate(iso) {
+    if (!iso || !iso.includes('-')) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+}
+
+function datesBetween(start, end) {
+    if (!start || !end || start > end) return [];
+
+    const out = [];
+    const d = new Date(start + 'T12:00:00');
+    const last = new Date(end + 'T12:00:00');
+
+    while (d <= last) {
+        out.push(d.toISOString().slice(0, 10));
+        d.setDate(d.getDate() + 1);
+    }
+
+    return out;
+}
+
+function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function defaultState() {
+    return {
+        trip: {
+            name: 'Đà Lạt Trip',
+            start: '2026-04-13',
+            end: '2026-04-16',
+            people: 4
+        },
+        places: [
+            {
+                id: uid(),
+                name: 'Linh Lam Cafe',
+                category: 'Cà phê',
+                address: 'Đà Lạt',
+                cost: 100000,
+                notes: '',
+                map: '',
+                menu: [],
+                date: null,
+                time: null
+            },
+            {
+                id: uid(),
+                name: 'Mongo Land',
+                category: 'Tham quan',
+                address: 'Đà Lạt',
+                cost: 250000,
+                notes: '',
+                map: '',
+                menu: [],
+                date: null,
+                time: null
+            },
+            {
+                id: uid(),
+                name: 'Lẩu gà lá é',
+                category: 'Ăn uống',
+                address: 'Đà Lạt',
+                cost: 250000,
+                notes: '',
+                map: '',
+                menu: [],
+                date: null,
+                time: null
+            }
+        ]
+    };
+}
+
+let state = defaultState();
+
+/* =========================================================
+   WORKING STATE
+========================================================= */
+
+function save() {
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+            state,
+            currentTripId
+        })
+    );
+}
+
+function load() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        const data = JSON.parse(raw);
+
+        // New format
+        if (data && data.state) {
+            state = data.state;
+            currentTripId = data.currentTripId || null;
+        }
+        // Old format compatibility
+        else if (data && data.trip && Array.isArray(data.places)) {
+            state = data;
+            currentTripId = null;
+        }
+
+        normalizeState();
+    } catch (error) {
+        console.error('Cannot load working trip:', error);
+        state = defaultState();
+        currentTripId = null;
+    }
+}
+
+function normalizeState() {
+    if (!state || typeof state !== 'object') state = defaultState();
+
+    if (!state.trip) {
+        state.trip = {
+            name: '',
+            start: '',
+            end: '',
+            people: 1
+        };
+    }
+
+    if (!Array.isArray(state.places)) state.places = [];
+
+    state.places.forEach(place => {
+        if (!place.id) place.id = uid();
+        if (!Array.isArray(place.menu)) place.menu = [];
+        if (place.date === undefined) place.date = null;
+        if (place.time === undefined) place.time = null;
+    });
+}
+
+function toast(msg) {
+    const t = $('toast');
+    if (!t) return;
+
+    t.textContent = msg;
+    t.classList.add('show');
+
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* =========================================================
+   SAVED TRIPS
+========================================================= */
 
 function getSavedTrips() {
-
     try {
-
-        return JSON.parse(
-            localStorage.getItem(TRIPS_STORAGE_KEY)
-        ) || [];
-
+        const trips = JSON.parse(localStorage.getItem(TRIPS_STORAGE_KEY));
+        return Array.isArray(trips) ? trips : [];
     } catch (error) {
-
-        console.error(
-            'Cannot load saved trips:',
-            error
-        );
-
+        console.error('Cannot load saved trips:', error);
         return [];
     }
 }
 
 function setSavedTrips(trips) {
-
-    localStorage.setItem(
-        TRIPS_STORAGE_KEY,
-        JSON.stringify(trips)
-    );
+    localStorage.setItem(TRIPS_STORAGE_KEY, JSON.stringify(trips));
 }
 
 function createTripId() {
-
-    return (
-        'trip_' +
-        Date.now() +
-        '_' +
-        Math.random()
-            .toString(36)
-            .slice(2, 8)
-    );
+    return 'trip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-function saveCurrentTrip() {
+async function saveCurrentTrip() {
+    syncTripFromInputs();
 
     if (!state.trip.name.trim()) {
-
-        alert('Vui lòng nhập tên chuyến đi.');
-
+        toast('Hãy nhập tên chuyến đi.');
+        return;
+    }
+    if (!state.trip.start || !state.trip.end) {
+        toast('Hãy chọn ngày bắt đầu và kết thúc.');
         return;
     }
 
+    try {
+        await ensureFirebaseAuth();
 
-    let trips = getSavedTrips();
+        if (!currentTripId) currentTripId = createTripId();
 
+        const payload = {
+            trip: clone(state.trip),
+            places: clone(state.places),
+            updatedAt: serverTimestamp(),
+            lastEditor: auth.currentUser.uid
+        };
 
-    /*
-        Nếu chuyến chưa từng được lưu
-        → tạo ID mới
-    */
-
-    if (!currentTripId) {
-
-        currentTripId = createTripId();
+        await setDoc(doc(db, 'trips', currentTripId), payload, { merge: true });
+        save();
+        toast('Đã lưu chuyến đi lên Firebase ✓');
+    } catch (error) {
+        console.error('Firebase save failed:', error);
+        toast('Lưu Firebase thất bại. Mở F12 → Console để xem lỗi.');
     }
-
-
-    const tripData = {
-
-        id: currentTripId,
-
-        trip: {
-            ...state.trip
-        },
-
-        places: JSON.parse(
-            JSON.stringify(state.places)
-        ),
-
-        updatedAt:
-            new Date().toISOString()
-    };
-
-
-    /*
-        Kiểm tra chuyến này đã tồn tại chưa
-    */
-
-    const existingIndex =
-        trips.findIndex(
-            trip =>
-                trip.id === currentTripId
-        );
-
-
-    if (existingIndex >= 0) {
-
-        /*
-            Update chuyến cũ
-        */
-
-        trips[existingIndex] =
-            tripData;
-
-    } else {
-
-        /*
-            Thêm chuyến mới
-        */
-
-        trips.unshift(
-            tripData
-        );
-    }
-
-
-    setSavedTrips(trips);
-
-
-    /*
-        Vẫn lưu working state hiện tại
-    */
-
-    save();
-
-
-    toast(
-        'Đã lưu chuyến đi ✓'
-    );
 }
-$('savedTripsList').addEventListener('click', function(event) {
-
-    // =========================
-    // OPEN TRIP
-    // =========================
-
-    const openButton =
-        event.target.closest('[data-open-trip]');
-
-    if (openButton) {
-
-        const tripId =
-            openButton.dataset.openTrip;
-
-        openSavedTrip(tripId);
-
-        return;
-    }
-
-
-    // =========================
-    // DELETE TRIP
-    // =========================
-
-    const deleteButton =
-        event.target.closest('[data-delete-trip]');
-
-    if (deleteButton) {
-
-        const tripId =
-            deleteButton.dataset.deleteTrip;
-
-        deleteSavedTrip(tripId);
-
-        return;
-    }
-
-});
-$('saveTripBtn').onclick = function () {
-
-    saveCurrentTrip();
-
-};
 
 function renderSavedTrips() {
-
     const container = $('savedTripsList');
+    if (!container) return;
+
     const trips = getSavedTrips();
 
     if (trips.length === 0) {
-
         container.innerHTML = `
             <div class="empty-trips">
-
-                <div class="empty-trips-icon">
-                    ✈
-                </div>
-
-                <strong>
-                    Chưa có chuyến đi nào
-                </strong>
-
-                <p>
-                    Hãy tạo lịch trình đầu tiên của bạn.
-                </p>
-
+                <div class="empty-trips-icon">✈</div>
+                <strong>Chưa có chuyến đi nào</strong>
+                <p>Hãy tạo lịch trình đầu tiên của bạn.</p>
             </div>
         `;
-
         return;
     }
 
-
     container.innerHTML = trips.map(saved => {
-
-        const trip = saved.trip;
-
-        const placeCount =
-            saved.places?.length || 0;
-
-        const days =
-            datesBetween(
-                trip.start,
-                trip.end
-            ).length;
-
+        const trip = saved.trip || {};
+        const placeCount = Array.isArray(saved.places) ? saved.places.length : 0;
+        const days = datesBetween(trip.start, trip.end).length;
 
         return `
             <div class="saved-trip-card">
-
                 <div class="saved-trip-top">
-
                     <div>
-
-                        <span class="saved-trip-days">
-                            ${days} NGÀY
-                        </span>
-
-                        <h3>
-                            ${esc(trip.name)}
-                        </h3>
-
+                        <span class="saved-trip-days">${days} NGÀY</span>
+                        <h3>${esc(trip.name || 'My Trip')}</h3>
                     </div>
-
 
                     <button
                         type="button"
                         class="delete-saved-trip"
-                        data-delete-trip="${saved.id}"
-                        title="Xóa chuyến đi">
-                        ×
-                    </button>
-
+                        data-delete-trip="${esc(saved.id)}"
+                        title="Xóa chuyến đi"
+                        aria-label="Xóa chuyến đi"
+                    >×</button>
                 </div>
-
 
                 <div class="saved-trip-info">
-
-                    <span>
-                        📅 ${localDate(trip.start)}
-                        →
-                        ${localDate(trip.end)}
-                    </span>
-
-                    <span>
-                        👥 ${trip.people || 1} người
-                    </span>
-
-                    <span>
-                        📍 ${placeCount} địa điểm
-                    </span>
-
+                    <span>📅 ${localDate(trip.start)} → ${localDate(trip.end)}</span>
+                    <span>👥 ${Number(trip.people || 1)} người</span>
+                    <span>📍 ${placeCount} địa điểm</span>
                 </div>
-
 
                 <button
                     type="button"
                     class="btn open-trip-btn"
-                    data-open-trip="${saved.id}">
+                    data-open-trip="${esc(saved.id)}"
+                >
                     Mở chuyến đi →
                 </button>
-
             </div>
         `;
-
     }).join('');
 }
 
-$('myTripsBtn').onclick = function () {
-
-    renderSavedTrips();
-
-    $('tripsModal')
-        .classList
-        .remove('hidden');
-};
-
-$('closeTripsModal').onclick =
-function () {
-
-    $('tripsModal')
-        .classList
-        .add('hidden');
-};
-
 function openSavedTrip(tripId) {
-
-    const trips = getSavedTrips();
-
-    const saved = trips.find(
-        trip => trip.id === tripId
-    );
-
-
+    const saved = getSavedTrips().find(item => item.id === tripId);
     if (!saved) {
-
-        alert('Không tìm thấy chuyến đi.');
-
+        toast('Không tìm thấy chuyến đi.');
         return;
     }
 
-
-    // Ghi nhớ chuyến hiện tại
     currentTripId = saved.id;
-
-
-    // Khôi phục thông tin chuyến đi
-    state.trip = JSON.parse(
-        JSON.stringify(saved.trip)
-    );
-
-
-    // Khôi phục toàn bộ địa điểm
-    state.places = JSON.parse(
-        JSON.stringify(saved.places || [])
-    );
-
-
-    // Đưa dữ liệu trở lại các input
-    $('tripName').value =
-        state.trip.name || '';
-
-    $('startDate').value =
-        state.trip.start || '';
-
-    $('endDate').value =
-        state.trip.end || '';
-
-    $('people').value =
-        state.trip.people || 1;
-
-
-    // Lưu trạng thái đang làm việc
+    state = {
+        trip: clone(saved.trip),
+        places: clone(saved.places)
+    };
+    normalizeState();
     save();
-
-
-    // Vẽ lại planner
     render();
-
-
-    // Đóng cửa sổ My Trips
-    $('tripsModal').classList.add('hidden');
-
-
-    toast('Đã mở chuyến đi ✓');
+    closeTripsModal();
+    toast(`Đã mở "${state.trip.name}"`);
 }
 
-function deleteSavedTrip(tripId) {
+async function deleteSavedTrip(tripId) {
+    const saved = getSavedTrips().find(item => item.id === tripId);
+    if (!saved) return;
 
-    const trips = getSavedTrips();
+    if (!confirm(`Xóa chuyến "${saved.trip?.name || 'Untitled Trip'}"?`)) return;
 
-    const trip = trips.find(
-        item => item.id === tripId
-    );
+    try {
+        await ensureFirebaseAuth();
+        await deleteDoc(doc(db, 'trips', tripId));
 
+        if (currentTripId === tripId) {
+            currentTripId = null;
+            save();
+        }
 
-    if (!trip) {
-        return;
+        toast('Đã xóa chuyến đi.');
+    } catch (error) {
+        console.error('Firebase delete failed:', error);
+        toast('Không thể xóa chuyến đi trên Firebase.');
     }
-
-
-    const confirmed = confirm(
-        `Bạn có chắc muốn xóa chuyến "${trip.trip.name}"?`
-    );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    const newTrips = trips.filter(
-        item => item.id !== tripId
-    );
-
-
-    setSavedTrips(newTrips);
-
-
-    // Nếu đang mở đúng chuyến vừa xóa
-    if (currentTripId === tripId) {
-        currentTripId = null;
-        save();
-    }
-
-
-    renderSavedTrips();
-
-    toast('Đã xóa chuyến đi');
 }
 
 function createNewTrip() {
+    const hasCurrentData =
+        Boolean(state.trip?.name?.trim()) ||
+        (Array.isArray(state.places) && state.places.length > 0);
 
-    const confirmed =
-        confirm(
-            'Tạo chuyến đi mới? Hãy chắc chắn rằng bạn đã lưu chuyến hiện tại nếu muốn giữ lại.'
+    if (hasCurrentData) {
+        const confirmed = confirm(
+            'Tạo chuyến đi mới? Nếu chuyến hiện tại chưa được lưu, các thay đổi chưa lưu sẽ bị mất.'
         );
 
-
-    if (!confirmed) {
-        return;
+        if (!confirmed) return;
     }
-
-
-    /*
-        Đây là chuyến hoàn toàn mới
-    */
 
     currentTripId = null;
 
-
-    /*
-        Reset trip
-    */
-
-    state.trip = {
-
-        name: '',
-
-        start: '',
-
-        end: '',
-
-        people: 1
+    state = {
+        trip: {
+            name: '',
+            start: '',
+            end: '',
+            people: 1
+        },
+        places: []
     };
 
-
-    /*
-        Reset địa điểm
-    */
-
-    state.places = [];
-
-
-    /*
-        Reset form
-    */
-
-    $('tripName').value = '';
-
-    $('startDate').value = '';
-
-    $('endDate').value = '';
-
-    $('people').value = 1;
-
+    pendingDrop = null;
+    currentMenu = [];
 
     save();
-
     render();
 
+    if ($('tripsModal')) {
+        $('tripsModal').classList.add('hidden');
+    }
 
-    $('tripsModal')
-        .classList
-        .add('hidden');
-
-
-    toast(
-        'Đã tạo chuyến đi mới'
-    );
+    toast('Đã tạo chuyến đi mới');
 }
 
-let state = {
-  trip: { name:'Đà Lạt Trip', start:'2026-04-13', end:'2026-04-16', people:4 },
-  places: [
-    {id:uid(),name:'Linh Lam Cafe',category:'Cà phê',address:'Đà Lạt',cost:100000,notes:'',map:'',date:null,time:null},
-    {id:uid(),name:'Mongo Land',category:'Tham quan',address:'Đà Lạt',cost:250000,notes:'',map:'',date:null,time:null},
-    {id:uid(),name:'Lẩu gà lá é',category:'Ăn uống',address:'Đà Lạt',cost:250000,notes:'',map:'',date:null,time:null}
-  ]
-};
-let pendingDrop = null;
-let currentMenu = [];
+/* =========================================================
+   MAIN PLANNER
+========================================================= */
 
-function uid(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-function $(id){ return document.getElementById(id); }
-function money(n){ return Number(n||0).toLocaleString('vi-VN') + ' ₫'; }
-function esc(s=''){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
-function localDate(iso){ const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
-function datesBetween(start,end){
-  const out=[], d=new Date(start+'T12:00:00'), last=new Date(end+'T12:00:00');
-  while(d<=last){ out.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
-  return out;
+function syncTripFromInputs() {
+    if ($('tripName')) state.trip.name = $('tripName').value.trim();
+    if ($('startDate')) state.trip.start = $('startDate').value;
+    if ($('endDate')) state.trip.end = $('endDate').value;
+    if ($('people')) state.trip.people = Math.max(1, Number($('people').value || 1));
 }
-function save() {
 
-    const workingData = {
+function render() {
+    normalizeState();
 
-        state: state,
+    const days = datesBetween(state.trip.start, state.trip.end);
 
-        currentTripId:
-            currentTripId
-    };
+    if ($('tripName')) $('tripName').value = state.trip.name || '';
+    if ($('startDate')) $('startDate').value = state.trip.start || '';
+    if ($('endDate')) $('endDate').value = state.trip.end || '';
+    if ($('people')) $('people').value = state.trip.people || 1;
 
+    if ($('tripBadge')) {
+        $('tripBadge').textContent = `${days.length} ngày • ${state.trip.people || 1} người`;
+    }
 
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-            workingData
-        )
-    );
-}
-function load() {
+    if ($('plannerTitle')) {
+        $('plannerTitle').textContent = state.trip.name || 'Các ngày của chuyến đi';
+    }
 
-    try {
+    const unscheduled = state.places.filter(place => !place.date);
 
-        const raw =
-            localStorage.getItem(
-                STORAGE_KEY
+    if ($('unscheduledCount')) $('unscheduledCount').textContent = unscheduled.length;
+
+    if ($('unscheduledList')) {
+        $('unscheduledList').innerHTML =
+            unscheduled.map(placeCard).join('') ||
+            `<div class="empty-day">Chưa có địa điểm chờ xếp lịch.</div>`;
+    }
+
+    if ($('daysContainer')) {
+        $('daysContainer').innerHTML = days.map((date, index) => {
+            const items = state.places
+                .filter(place => place.date === date)
+                .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+
+            const total = items.reduce(
+                (sum, place) => sum + Number(place.cost || 0),
+                0
             );
 
+            return `
+                <article class="day-column">
+                    <div class="day-head">
+                        <div class="day-no">DAY ${index + 1}</div>
+                        <h3>${localDate(date)}</h3>
+                    </div>
 
-        if (!raw) {
-            return;
-        }
+                    <div class="day-drop" data-date="${date}">
+                        ${
+                            items.length
+                                ? items.map(placeCard).join('')
+                                : `<div class="empty-day">Kéo địa điểm vào đây<br>rồi chọn thời gian</div>`
+                        }
+                    </div>
 
+                    <div class="day-total">
+                        <span>Chi phí ngày</span>
+                        <strong>${money(total)}</strong>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
 
-        const data =
-            JSON.parse(raw);
+    const scheduled = state.places.filter(place => place.date);
 
+    if ($('placeTotal')) $('placeTotal').textContent = state.places.length;
+    if ($('scheduledTotal')) $('scheduledTotal').textContent = scheduled.length;
 
-        /*
-            Format mới
-        */
-
-        if (data.state) {
-
-            state =
-                data.state;
-
-            currentTripId =
-                data.currentTripId || null;
-
-        }
-
-        /*
-            Tương thích dữ liệu cũ
-        */
-
-        else {
-
-            state =
-                data;
-
-            currentTripId =
-                null;
-        }
-
-
-    } catch (error) {
-
-        console.error(
-            'Cannot load trip:',
-            error
+    if ($('costTotal')) {
+        $('costTotal').textContent = money(
+            state.places.reduce(
+                (sum, place) => sum + Number(place.cost || 0),
+                0
+            )
         );
     }
-}
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),1800); }
 
-function render(){
-  const days=datesBetween(state.trip.start,state.trip.end);
-  $('tripName').value=state.trip.name; $('startDate').value=state.trip.start; $('endDate').value=state.trip.end; $('people').value=state.trip.people;
-  $('tripBadge').textContent=`${days.length} ngày • ${state.trip.people} người`;
-  $('plannerTitle').textContent=state.trip.name || 'Các ngày của chuyến đi';
-
-  const uns=state.places.filter(p=>!p.date);
-  $('unscheduledCount').textContent=uns.length;
-  $('unscheduledList').innerHTML=uns.map(placeCard).join('') || `<div class="empty-day">Chưa có địa điểm chờ xếp lịch.</div>`;
-
-  $('daysContainer').innerHTML=days.map((date,i)=>{
-    const items=state.places.filter(p=>p.date===date).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
-    const total=items.reduce((s,p)=>s+Number(p.cost||0),0);
-    return `<article class="day-column">
-      <div class="day-head"><div class="day-no">DAY ${i+1}</div><h3>${localDate(date)}</h3></div>
-      <div class="day-drop" data-date="${date}">${items.length?items.map(placeCard).join(''):`<div class="empty-day">Kéo địa điểm vào đây<br>rồi chọn thời gian</div>`}</div>
-      <div class="day-total"><span>Chi phí ngày</span><strong>${money(total)}</strong></div>
-    </article>`;
-  }).join('');
-
-  const scheduled=state.places.filter(p=>p.date);
-  $('placeTotal').textContent=state.places.length;
-  $('scheduledTotal').textContent=scheduled.length;
-  $('costTotal').textContent=money(state.places.reduce((s,p)=>s+Number(p.cost||0),0));
-  bindDrag();
-  save();
+    bindDrag();
+    save();
 }
 
-function placeCard(p){
-  return `<div class="place-card" draggable="true" data-id="${p.id}">
-    <div class="place-top">
-      <div><div class="place-name">${esc(p.name)}</div><div class="category">${esc(p.category)}</div></div>
-      ${p.time?`<span class="time-chip">${esc(p.time)}</span>`:''}
-    </div>
-    <div class="place-meta">
-      ${p.address?`📍 ${esc(p.address)}<br>`:''}
-      <span class="cost">💰 ${money(p.cost)}</span>
-      ${p.menu?.length ? `
+function placeCard(place) {
+    return `
+        <div class="place-card" draggable="true" data-id="${esc(place.id)}">
 
-    <div class="card-menu">
+            <div class="place-top">
+                <div>
+                    <div class="place-name">${esc(place.name)}</div>
+                    <div class="category">${esc(place.category)}</div>
+                </div>
 
-        ${p.menu.map(item => `
-
-            <div class="card-menu-item">
-
-                <span>• ${esc(item.name)}</span>
-
-                <strong>
-                    ${money(item.price)}
-                </strong>
-
+                ${place.time ? `<span class="time-chip">${esc(place.time)}</span>` : ''}
             </div>
 
-        `).join('')}
+            <div class="place-meta">
+                ${place.address ? `📍 ${esc(place.address)}<br>` : ''}
 
-    </div>
+                <span class="cost">💰 ${money(place.cost)}</span>
 
-` : ''}
-      ${p.notes?`<br>📝 ${esc(p.notes)}`:''}
-      ${p.map?`<br><a class="map-link" href="${esc(p.map)}" target="_blank">↗ Mở bản đồ / link</a>`:''}
-    </div>
-    <div class="card-actions">
-      <button class="mini-btn" onclick="editPlace('${p.id}')">✎ Sửa</button>
-      <button class="mini-btn" onclick="duplicatePlace('${p.id}')">⧉ Copy</button>
-      ${p.date?`<button class="mini-btn" onclick="unschedule('${p.id}')">↩ Bỏ lịch</button>`:''}
-      <button class="mini-btn" onclick="deletePlace('${p.id}')">× Xóa</button>
-    </div>
-  </div>`;
+                ${
+                    place.menu?.length
+                        ? `
+                            <div class="card-menu">
+                                ${place.menu.map(item => `
+                                    <div class="card-menu-item">
+                                        <span>• ${esc(item.name)}</span>
+                                        <strong>${money(item.price)}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `
+                        : ''
+                }
+
+                ${place.notes ? `<br>📝 ${esc(place.notes)}` : ''}
+
+                ${
+                    place.map
+                        ? `<br><a class="map-link" href="${esc(place.map)}" target="_blank" rel="noopener noreferrer">↗ Mở bản đồ / link</a>`
+                        : ''
+                }
+            </div>
+
+            <div class="card-actions">
+                <button type="button" class="mini-btn" data-place-action="edit" data-place-id="${esc(place.id)}">✎ Sửa</button>
+                <button type="button" class="mini-btn" data-place-action="duplicate" data-place-id="${esc(place.id)}">⧉ Copy</button>
+
+                ${
+                    place.date
+                        ? `<button type="button" class="mini-btn" data-place-action="unschedule" data-place-id="${esc(place.id)}">↩ Bỏ lịch</button>`
+                        : ''
+                }
+
+                <button type="button" class="mini-btn" data-place-action="delete" data-place-id="${esc(place.id)}">× Xóa</button>
+            </div>
+
+        </div>
+    `;
 }
 
-function bindDrag(){
-  document.querySelectorAll('.place-card').forEach(card=>{
-    card.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/plain',card.dataset.id); card.classList.add('dragging'); });
-    card.addEventListener('dragend',()=>card.classList.remove('dragging'));
-  });
-  document.querySelectorAll('.day-drop, #unscheduledList').forEach(zone=>{
-    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over')});
-    zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
-    zone.addEventListener('drop',e=>{
-      e.preventDefault(); zone.classList.remove('drag-over');
-      const id=e.dataTransfer.getData('text/plain'), date=zone.dataset.date;
-      if(!date){ const p=find(id); if(p){p.date=null;p.time=null;render();toast('Đã đưa về Chưa xếp lịch');} return; }
-      pendingDrop={id,date}; const p=find(id); $('timePlaceName').textContent=p?.name||''; $('scheduleTime').value=p?.time||'09:00'; $('timeModal').classList.remove('hidden');
+function find(id) {
+    return state.places.find(place => place.id === id);
+}
+
+/* =========================================================
+   DRAG & DROP
+========================================================= */
+
+function bindDrag() {
+    document.querySelectorAll('.place-card').forEach(card => {
+        card.addEventListener('dragstart', event => {
+            event.dataTransfer.setData('text/plain', card.dataset.id);
+            event.dataTransfer.effectAllowed = 'move';
+            card.classList.add('dragging');
+        });
+
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+        });
     });
-  });
+
+    document.querySelectorAll('.day-drop, #unscheduledList').forEach(zone => {
+        zone.addEventListener('dragover', event => {
+            event.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('drag-over');
+        });
+
+        zone.addEventListener('drop', event => {
+            event.preventDefault();
+            zone.classList.remove('drag-over');
+
+            const id = event.dataTransfer.getData('text/plain');
+            const date = zone.dataset.date;
+            const place = find(id);
+
+            if (!place) return;
+
+            // Drop back into unscheduled area
+            if (!date) {
+                place.date = null;
+                place.time = null;
+                render();
+                toast('Đã đưa về Chưa xếp lịch');
+                return;
+            }
+
+            pendingDrop = { id, date };
+
+            if ($('timePlaceName')) $('timePlaceName').textContent = place.name || '';
+            if ($('scheduleTime')) $('scheduleTime').value = place.time || '09:00';
+            if ($('timeModal')) $('timeModal').classList.remove('hidden');
+        });
+    });
 }
-function find(id){return state.places.find(p=>p.id===id)}
-function openPlaceModal(p = null) {
 
-    $('modalTitle').textContent =
-        p ? 'Chỉnh sửa địa điểm' : 'Thêm địa điểm';
+/* =========================================================
+   PLACE MODAL
+========================================================= */
 
-    $('placeId').value = p?.id || '';
+function openPlaceModal(place = null) {
+    if (!$('placeModal')) return;
 
-    $('placeName').value = p?.name || '';
+    $('modalTitle').textContent = place ? 'Chỉnh sửa địa điểm' : 'Thêm địa điểm';
+    $('placeId').value = place?.id || '';
+    $('placeName').value = place?.name || '';
+    $('placeCategory').value = place?.category || 'Tham quan';
+    $('placeCost').value = Number(place?.cost || 0);
+    $('placeAddress').value = place?.address || '';
+    $('placeNotes').value = place?.notes || '';
+    $('placeMap').value = place?.map || '';
 
-    $('placeCategory').value =
-        p?.category || 'Tham quan';
-
-    $('placeCost').value =
-        p?.cost || 0;
-
-    $('placeAddress').value =
-        p?.address || '';
-
-    $('placeNotes').value =
-        p?.notes || '';
-
-    $('placeMap').value =
-        p?.map || '';
-
-
-    // Load menu của địa điểm
-    currentMenu = p?.menu
-        ? JSON.parse(JSON.stringify(p.menu))
-        : [];
-
+    currentMenu = Array.isArray(place?.menu) ? clone(place.menu) : [];
 
     updateMenuVisibility();
-
     renderMenuItems();
 
-
     $('placeModal').classList.remove('hidden');
-}
-function closePlaceModal(){$('placeModal').classList.add('hidden')}
-window.editPlace=id=>openPlaceModal(find(id));
-window.duplicatePlace=id=>{const p=find(id);if(!p)return;state.places.push({...p,id:uid(),name:p.name+' (copy)',date:null,time:null});render();toast('Đã tạo bản sao')};
-window.unschedule=id=>{const p=find(id);if(p){p.date=null;p.time=null;render();}};
-window.deletePlace=id=>{if(confirm('Xóa địa điểm này?')){state.places=state.places.filter(p=>p.id!==id);render();}};
 
-$('placeForm').addEventListener('submit',e=>{
-  e.preventDefault(); const id=$('placeId').value;
-const category = $('placeCategory').value;
-
-
-let finalMenu = [];
-
-if (isFoodCategory(category)) {
-
-    finalMenu = currentMenu.filter(item =>
-        item.name.trim() !== ''
-    );
+    // Scroll modal content back to the top when reopened
+    const panel = $('placeModal').querySelector('.modal-panel');
+    if (panel) panel.scrollTop = 0;
 }
 
-
-let finalCost = Number(
-    $('placeCost').value || 0
-);
-
-
-// Nếu có menu → tổng menu chính là chi phí địa điểm
-
-if (finalMenu.length > 0) {
-
-    finalCost = finalMenu.reduce(
-        (sum, item) =>
-            sum + Number(item.price || 0),
-        0
-    );
+function closePlaceModal() {
+    if ($('placeModal')) $('placeModal').classList.add('hidden');
 }
 
+function duplicatePlace(id) {
+    const place = find(id);
+    if (!place) return;
 
-const data = {
+    const copy = clone(place);
+    copy.id = uid();
+    copy.name = place.name + ' (copy)';
+    copy.date = null;
+    copy.time = null;
 
-    name: $('placeName').value.trim(),
+    state.places.push(copy);
+    render();
+    toast('Đã tạo bản sao');
+}
 
-    category: category,
+function unschedulePlace(id) {
+    const place = find(id);
+    if (!place) return;
 
-    address: $('placeAddress').value.trim(),
+    place.date = null;
+    place.time = null;
 
-    cost: finalCost,
+    render();
+    toast('Đã bỏ lịch');
+}
 
-    notes: $('placeNotes').value.trim(),
+function deletePlaceById(id) {
+    const place = find(id);
+    if (!place) return;
 
-    map: $('placeMap').value.trim(),
+    if (!confirm(`Xóa địa điểm "${place.name}"?`)) return;
 
-    menu: finalMenu
-};  if(id){Object.assign(find(id),data)}else state.places.push({id:uid(),...data,date:null,time:null});
-  closePlaceModal();render();toast(id?'Đã cập nhật':'Đã thêm địa điểm');
-});
+    state.places = state.places.filter(item => item.id !== id);
+    render();
+    toast('Đã xóa địa điểm');
+}
+
+/* =========================================================
+   MENU
+========================================================= */
+
 function isFoodCategory(category) {
     return category === 'Ăn uống' || category === 'Cà phê';
 }
 
-
 function updateMenuVisibility() {
+    if (!$('placeCategory') || !$('menuSection')) return;
 
-    const category = $('placeCategory').value;
-    const menuSection = $('menuSection');
+    const show = isFoodCategory($('placeCategory').value);
+    $('menuSection').classList.toggle('hidden', !show);
 
-    if (isFoodCategory(category)) {
-        menuSection.classList.remove('hidden');
-    } else {
-        menuSection.classList.add('hidden');
+    if (!show && $('placeCost')) {
+        $('placeCost').readOnly = false;
     }
+
+    calculateMenuTotal();
 }
 
-
 function renderMenuItems() {
-
     const container = $('menuItems');
+    if (!container) return;
 
     if (currentMenu.length === 0) {
-
         container.innerHTML = `
             <div class="menu-empty">
                 Chưa có món nào.
             </div>
         `;
-
     } else {
-
         container.innerHTML = currentMenu.map((item, index) => `
-
-            <div class="menu-item">
-
+            <div class="menu-item" data-menu-index="${index}">
                 <input
                     type="text"
                     class="menu-name"
                     placeholder="Tên món"
-                    value="${esc(item.name)}"
-                    oninput="updateMenuName(${index}, this.value)"
+                    value="${esc(item.name || '')}"
+                    data-menu-field="name"
                 >
 
                 <div class="menu-price-wrap">
-
                     <input
                         type="number"
                         class="menu-price"
                         min="0"
                         placeholder="Giá"
-                        value="${item.price || ''}"
-                        oninput="updateMenuPrice(${index}, this.value)"
+                        value="${Number(item.price || 0) || ''}"
+                        data-menu-field="price"
                     >
-
                     <span>₫</span>
-
                 </div>
 
                 <button
                     type="button"
                     class="remove-menu-btn"
-                    onclick="removeMenuItem(${index})">
-                    ×
-                </button>
-
+                    data-remove-menu="${index}"
+                    aria-label="Xóa món"
+                >×</button>
             </div>
-
         `).join('');
     }
 
     calculateMenuTotal();
 }
 
-
 function addMenuItem() {
-
     currentMenu.push({
         name: '',
         price: 0
     });
 
     renderMenuItems();
+
+    const inputs = document.querySelectorAll('#menuItems .menu-name');
+    const lastInput = inputs[inputs.length - 1];
+    if (lastInput) lastInput.focus();
 }
 
-
-window.removeMenuItem = function(index) {
-
-    currentMenu.splice(index, 1);
-
-    renderMenuItems();
-};
-
-
-window.updateMenuName = function(index, value) {
-
-    currentMenu[index].name = value;
-};
-
-
-window.updateMenuPrice = function(index, value) {
-
-    currentMenu[index].price = Number(value) || 0;
-
-    calculateMenuTotal();
-};
-
-
 function calculateMenuTotal() {
-
     const total = currentMenu.reduce(
         (sum, item) => sum + Number(item.price || 0),
         0
     );
 
-    $('menuTotal').textContent = money(total);
+    if ($('menuTotal')) $('menuTotal').textContent = money(total);
 
+    if (!$('placeCost') || !$('placeCategory')) return;
 
-    // Nếu đã nhập menu thì chi phí địa điểm
-    // chính là tổng giá menu
+    const foodCategory = isFoodCategory($('placeCategory').value);
 
-    if (currentMenu.length > 0) {
-
+    if (foodCategory && currentMenu.length > 0) {
         $('placeCost').value = total;
-
         $('placeCost').readOnly = true;
-
     } else {
-
         $('placeCost').readOnly = false;
     }
 }
 
-$('placeCategory').addEventListener('change', function() {
+/* =========================================================
+   TRIP UPDATE
+========================================================= */
 
-    updateMenuVisibility();
+function updateTripFromForm() {
+    const start = $('startDate')?.value || '';
+    const end = $('endDate')?.value || '';
 
-});
-
-$('addMenuItemBtn').addEventListener('click', function() {
-
-    addMenuItem();
-
-});
-
-
-$('addPlaceBtn').onclick=()=>openPlaceModal();
-$('closeModalBtn').onclick=$('cancelModalBtn').onclick=closePlaceModal;
-$('closeTimeBtn').onclick=$('cancelTimeBtn').onclick=()=>{pendingDrop=null;$('timeModal').classList.add('hidden')};
-$('confirmTimeBtn').onclick=()=>{
-  if(!pendingDrop)return; const p=find(pendingDrop.id); if(p){p.date=pendingDrop.date;p.time=$('scheduleTime').value||'09:00'}
-  pendingDrop=null;$('timeModal').classList.add('hidden');render();toast('Đã xếp lịch');
-};
-$('createTripBtn').onclick=()=>{
-  const start=$('startDate').value,end=$('endDate').value;
-  if(!start||!end||start>end){alert('Ngày bắt đầu/kết thúc chưa hợp lệ.');return}
-  state.trip={name:$('tripName').value.trim()||'My Trip',start,end,people:Number($('people').value||1)};
-  const valid=new Set(datesBetween(start,end)); state.places.forEach(p=>{if(p.date&&!valid.has(p.date)){p.date=null;p.time=null}});
-  render();toast('Đã cập nhật chuyến đi');
-};
-$('resetBtn').onclick=()=>{if(confirm('Tạo chuyến mới? Dữ liệu hiện tại sẽ được xóa.')){localStorage.removeItem(STORAGE_KEY);location.reload()}};
-
-function rowsForDate(date){
-  return state.places.filter(p=>p.date===date).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
-}
-$('excelBtn').onclick=()=>{
-  if(typeof XLSX==='undefined'){alert('Không tải được thư viện Excel. Hãy kiểm tra Internet.');return}
-  const wb=XLSX.utils.book_new(), days=datesBetween(state.trip.start,state.trip.end);
-  const aoa=[];
-  const merges=[];
-  const dayTitleRows=[];
-  const headerRows=[];
-  const totalRows=[];
-  const separatorRows=[];
-
-  // Main trip title
-  aoa.push([state.trip.name,'','','','','','']);
-  merges.push({s:{r:0,c:0},e:{r:0,c:6}});
-  aoa.push([`${localDate(state.trip.start)} → ${localDate(state.trip.end)}  •  ${state.trip.people} người`,'','','','','','']);
-  merges.push({s:{r:1,c:0},e:{r:1,c:6}});
-  aoa.push(['','','','','','','']);
-
-  days.forEach((d,i)=>{
-    const titleRow=aoa.length;
-    dayTitleRows.push(titleRow);
-    aoa.push([`DAY ${i+1}  •  ${localDate(d)}`,'','','','','','']);
-    merges.push({s:{r:titleRow,c:0},e:{r:titleRow,c:6}});
-
-    const headerRow=aoa.length;
-    headerRows.push(headerRow);
-    aoa.push(['Thời gian','Nội dung','Địa điểm','Chi phí','Ghi chú','Địa chỉ','Map']);
-
-    const rows=rowsForDate(d);
-    rows.forEach(p=>aoa.push([
-      p.time||'', p.category||'', p.name||'', Number(p.cost||0),
-      p.notes||'', p.address||'', p.map||''
-    ]));
-
-    const totalRow=aoa.length;
-    totalRows.push(totalRow);
-    const total=rows.reduce((s,p)=>s+Number(p.cost||0),0);
-    aoa.push(['','','TỔNG CHI PHÍ NGÀY',total,'','','']);
-
-    // Coloured separator between days
-    if(i<days.length-1){
-      const sep=aoa.length;
-      separatorRows.push(sep);
-      aoa.push(['','','','','','','']);
-      aoa.push(['','','','','','','']);
+    if (!start || !end || start > end) {
+        alert('Ngày bắt đầu/kết thúc chưa hợp lệ.');
+        return;
     }
-  });
 
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!merges']=merges;
-  const green='2C5951', green2='597355', greenLight='DCEBE2';
-  const pink='F2DCE2', pink2='F2BDD0', pinkDark='BF5079';
-  const pale='FFF7F9', white='FFFFFF', ink='263833', borderColor='D9E1DC';
-  const border={top:{style:'thin',color:{rgb:borderColor}},bottom:{style:'thin',color:{rgb:borderColor}},left:{style:'thin',color:{rgb:borderColor}},right:{style:'thin',color:{rgb:borderColor}}};
+    state.trip = {
+        name: $('tripName')?.value.trim() || 'My Trip',
+        start,
+        end,
+        people: Math.max(1, Number($('people')?.value || 1))
+    };
 
-  const range=XLSX.utils.decode_range(ws['!ref']);
-  for(let R=0;R<=range.e.r;R++){
-    for(let C=0;C<=6;C++){
-      const addr=XLSX.utils.encode_cell({r:R,c:C});
-      if(!ws[addr]) ws[addr]={t:'s',v:''};
-      ws[addr].s={
-        font:{name:'Arial',sz:10,color:{rgb:ink}},
-        alignment:{vertical:'center',wrapText:true},
-        border:border,
-        fill:{fgColor:{rgb:white}}
-      };
-    }
-  }
+    const validDates = new Set(datesBetween(start, end));
 
-  // Trip title
-  ws['A1'].s={fill:{fgColor:{rgb:pink}},font:{name:'Arial',sz:20,bold:true,color:{rgb:green}},alignment:{horizontal:'center',vertical:'center'}};
-  ws['A2'].s={fill:{fgColor:{rgb:pink}},font:{name:'Arial',sz:11,bold:true,color:{rgb:green2}},alignment:{horizontal:'center',vertical:'center'}};
+    state.places.forEach(place => {
+        if (place.date && !validDates.has(place.date)) {
+            place.date = null;
+            place.time = null;
+        }
+    });
 
-  dayTitleRows.forEach((R,i)=>{
-    for(let C=0;C<=6;C++){
-      const a=XLSX.utils.encode_cell({r:R,c:C});
-      ws[a].s={fill:{fgColor:{rgb:i%2===0?green:green2}},font:{name:'Arial',sz:14,bold:true,color:{rgb:white}},alignment:{horizontal:'center',vertical:'center'},border};
-    }
-  });
-  headerRows.forEach(R=>{
-    for(let C=0;C<=6;C++){
-      const a=XLSX.utils.encode_cell({r:R,c:C});
-      ws[a].s={fill:{fgColor:{rgb:pinkDark}},font:{name:'Arial',sz:10,bold:true,color:{rgb:white}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border};
-    }
-  });
-
-  // Body styling by locating rows between each header and total.
-  headerRows.forEach((h,idx)=>{
-    const t=totalRows[idx];
-    for(let R=h+1;R<t;R++){
-      for(let C=0;C<=6;C++){
-        const a=XLSX.utils.encode_cell({r:R,c:C});
-        ws[a].s={fill:{fgColor:{rgb:(R-h)%2?pale:'F5FAF7'}},font:{name:'Arial',sz:10,color:{rgb:ink}},alignment:{vertical:'center',wrapText:true},border};
-      }
-      const timeCell=XLSX.utils.encode_cell({r:R,c:0});
-      ws[timeCell].s.font={name:'Arial',sz:10,bold:true,color:{rgb:green}};
-      const costCell=XLSX.utils.encode_cell({r:R,c:3});
-      ws[costCell].z='#,##0" ₫"';
-      ws[costCell].s.alignment={horizontal:'right',vertical:'center'};
-    }
-  });
-
-  totalRows.forEach(R=>{
-    for(let C=0;C<=6;C++){
-      const a=XLSX.utils.encode_cell({r:R,c:C});
-      ws[a].s={fill:{fgColor:{rgb:greenLight}},font:{name:'Arial',sz:10,bold:true,color:{rgb:green}},alignment:{vertical:'center',wrapText:true},border};
-    }
-    ws[XLSX.utils.encode_cell({r:R,c:3})].z='#,##0" ₫"';
-  });
-
-  // Strong pink separator bands between days.
-  separatorRows.forEach(R=>{
-    for(let RR=R;RR<=R+1;RR++){
-      for(let C=0;C<=6;C++){
-        const a=XLSX.utils.encode_cell({r:RR,c:C});
-        ws[a].s={fill:{fgColor:{rgb:RR===R?pink2:pink}},font:{color:{rgb:pink2}},alignment:{vertical:'center'}};
-      }
-    }
-  });
-
-  ws['!cols']=[{wch:12},{wch:18},{wch:28},{wch:16},{wch:35},{wch:32},{wch:38}];
-  ws['!rows']=aoa.map((_,r)=>{
-    if(r===0)return {hpt:32};
-    if(r===1)return {hpt:22};
-    if(dayTitleRows.includes(r))return {hpt:27};
-    if(headerRows.includes(r))return {hpt:24};
-    if(separatorRows.includes(r)||separatorRows.includes(r-1))return {hpt:8};
-    return {hpt:34};
-  });
-  ws['!freeze']={xSplit:0,ySplit:3};
-  XLSX.utils.book_append_sheet(wb,ws,'Trip Planner');
-
-  // Keep a clean detail sheet for filtering/searching.
-  const detail=[['Ngày','Thời gian','Nội dung','Địa điểm','Địa chỉ','Chi phí','Ghi chú','Map']];
-  days.forEach(d=>rowsForDate(d).forEach(p=>detail.push([localDate(d),p.time,p.category,p.name,p.address,p.cost,p.notes,p.map])));
-  const ws2=XLSX.utils.aoa_to_sheet(detail);
-  ws2['!cols']=[{wch:13},{wch:10},{wch:16},{wch:25},{wch:30},{wch:15},{wch:35},{wch:35}];
-  const r2=XLSX.utils.decode_range(ws2['!ref']);
-  for(let C=0;C<=r2.e.c;C++){
-    const a=XLSX.utils.encode_cell({r:0,c:C});
-    ws2[a].s={fill:{fgColor:{rgb:green}},font:{bold:true,color:{rgb:white}},alignment:{horizontal:'center'},border};
-  }
-  for(let R=1;R<=r2.e.r;R++) for(let C=0;C<=r2.e.c;C++){
-    const a=XLSX.utils.encode_cell({r:R,c:C}); if(!ws2[a]) continue;
-    ws2[a].s={fill:{fgColor:{rgb:R%2?pale:'F5FAF7'}},font:{color:{rgb:ink}},alignment:{vertical:'center',wrapText:true},border};
-    if(C===5) ws2[a].z='#,##0" ₫"';
-  }
-  ws2['!autofilter']={ref:ws2['!ref']};
-  XLSX.utils.book_append_sheet(wb,ws2,'Trip Details');
-  XLSX.writeFile(wb,`${state.trip.name.replace(/[^\wÀ-ỹ -]/g,'') || 'Trip'}-planner.xlsx`);
-};
-
-function periodForTime(t){
-  const h=Number((t||'0:00').split(':')[0]);
-  if(h<11) return ['SÁNG','☀'];
-  if(h<14) return ['TRƯA',''];
-  if(h<18) return ['CHIỀU',''];
-  return ['TỐI','☾'];
-}
-function pdfPageHTML(date,dayNo){
-  const rows=rowsForDate(date), groups=[];
-  rows.forEach(p=>{
-    const [label,icon]=periodForTime(p.time);
-    let g=groups.find(x=>x.label===label);
-    if(!g){g={label,icon,items:[]};groups.push(g)}
-    g.items.push(p);
-  });
-  const total=rows.reduce((s,p)=>s+Number(p.cost||0),0);
-  return `<section class="pdf-sheet">
-    <div class="pdf-top">
-      <div class="pdf-kicker">LỊCH TRÌNH DU LỊCH</div>
-      <div class="pdf-trip">${esc(state.trip.name)}</div>
-      <div class="pdf-day">DAY ${dayNo}</div>
-      <div class="pdf-date">${localDate(date)}</div>
-    </div>
-    <div class="pdf-body">
-      ${groups.map(g=>`<div class="pdf-period">
-        <div class="pdf-period-title">${g.label} <span>${g.icon}</span></div>
-        ${g.items.map(p=>`<div class="pdf-row">
-          <div class="pdf-time">${esc(p.time||'')}</div>
-          <div class="pdf-info">
-            <div class="pdf-place">${esc(p.name)}</div>
-            <div class="pdf-category">${esc(p.category)}${p.address?` • ${esc(p.address)}`:''}</div>
-            ${p.notes?`<div class="pdf-note">${esc(p.notes)}</div>`:''}
-          </div>
-          <div class="pdf-cost">${p.cost?money(p.cost):''}</div>
-        </div>`).join('')}
-      </div>`).join('')}
-      ${rows.length?'':`<div class="pdf-empty">Chưa có hoạt động cho ngày này.</div>`}
-    </div>
-    <div class="pdf-footer"><span>Chi phí ngày</span><strong>${money(total)}</strong></div>
-  </section>`;
+    render();
+    toast('Đã cập nhật chuyến đi');
 }
 
-$('pdfBtn').onclick=async()=>{
-  if(!window.jspdf || !window.html2canvas){alert('Không tải được thư viện PDF. Hãy kiểm tra Internet.');return}
-  const {jsPDF}=window.jspdf, days=datesBetween(state.trip.start,state.trip.end);
-  const host=document.createElement('div');
-  host.className='pdf-render-host';
-  host.innerHTML=days.map((d,i)=>pdfPageHTML(d,i+1)).join('');
-  document.body.appendChild(host);
-  try{
-    await document.fonts.ready;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
-    const pages=[...host.querySelectorAll('.pdf-sheet')];
-    for(let i=0;i<pages.length;i++){
-      if(i) doc.addPage();
-      const canvas=await html2canvas(pages[i],{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
-      const img=canvas.toDataURL('image/jpeg',0.94);
-      doc.addImage(img,'JPEG',0,0,210,297,undefined,'FAST');
+/* =========================================================
+   EVENT LISTENERS
+========================================================= */
+
+function bindStaticEvents() {
+    $('saveTripBtn')?.addEventListener('click', saveCurrentTrip);
+
+    $('myTripsBtn')?.addEventListener('click', () => {
+        renderSavedTrips();
+        $('tripsModal')?.classList.remove('hidden');
+    });
+
+    $('closeTripsModal')?.addEventListener('click', () => {
+        $('tripsModal')?.classList.add('hidden');
+    });
+
+    $('newTripBtn')?.addEventListener('click', createNewTrip);
+    $('createTripFromListBtn')?.addEventListener('click', createNewTrip);
+
+    // Dynamic saved-trip buttons: event delegation
+    $('savedTripsList')?.addEventListener('click', event => {
+        const openButton = event.target.closest('[data-open-trip]');
+
+        if (openButton) {
+            openSavedTrip(openButton.dataset.openTrip);
+            return;
+        }
+
+        const deleteButton = event.target.closest('[data-delete-trip]');
+
+        if (deleteButton) {
+            deleteSavedTrip(deleteButton.dataset.deleteTrip);
+        }
+    });
+
+    // Dynamic place-card buttons: event delegation
+    document.addEventListener('click', event => {
+        const button = event.target.closest('[data-place-action]');
+        if (!button) return;
+
+        const id = button.dataset.placeId;
+        const action = button.dataset.placeAction;
+
+        if (action === 'edit') openPlaceModal(find(id));
+        if (action === 'duplicate') duplicatePlace(id);
+        if (action === 'unschedule') unschedulePlace(id);
+        if (action === 'delete') deletePlaceById(id);
+    });
+
+    $('addPlaceBtn')?.addEventListener('click', () => openPlaceModal());
+
+    $('closeModalBtn')?.addEventListener('click', closePlaceModal);
+    $('cancelModalBtn')?.addEventListener('click', closePlaceModal);
+
+    $('placeCategory')?.addEventListener('change', updateMenuVisibility);
+    $('addMenuItemBtn')?.addEventListener('click', addMenuItem);
+
+    $('menuItems')?.addEventListener('input', event => {
+        const row = event.target.closest('[data-menu-index]');
+        if (!row) return;
+
+        const index = Number(row.dataset.menuIndex);
+        const field = event.target.dataset.menuField;
+
+        if (!currentMenu[index] || !field) return;
+
+        if (field === 'name') {
+            currentMenu[index].name = event.target.value;
+        }
+
+        if (field === 'price') {
+            currentMenu[index].price = Number(event.target.value || 0);
+            calculateMenuTotal();
+        }
+    });
+
+    $('menuItems')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-remove-menu]');
+        if (!button) return;
+
+        const index = Number(button.dataset.removeMenu);
+        currentMenu.splice(index, 1);
+        renderMenuItems();
+    });
+
+    $('placeForm')?.addEventListener('submit', event => {
+        event.preventDefault();
+
+        const id = $('placeId').value;
+        const category = $('placeCategory').value;
+
+        const finalMenu = isFoodCategory(category)
+            ? currentMenu
+                .filter(item => item.name.trim() !== '')
+                .map(item => ({
+                    name: item.name.trim(),
+                    price: Number(item.price || 0)
+                }))
+            : [];
+
+        let finalCost = Number($('placeCost').value || 0);
+
+        if (finalMenu.length > 0) {
+            finalCost = finalMenu.reduce(
+                (sum, item) => sum + Number(item.price || 0),
+                0
+            );
+        }
+
+        const data = {
+            name: $('placeName').value.trim(),
+            category,
+            address: $('placeAddress').value.trim(),
+            cost: finalCost,
+            notes: $('placeNotes').value.trim(),
+            map: $('placeMap').value.trim(),
+            menu: finalMenu
+        };
+
+        if (!data.name) {
+            alert('Vui lòng nhập tên địa điểm.');
+            return;
+        }
+
+        if (id) {
+            const place = find(id);
+            if (place) Object.assign(place, data);
+        } else {
+            state.places.push({
+                id: uid(),
+                ...data,
+                date: null,
+                time: null
+            });
+        }
+
+        closePlaceModal();
+        render();
+        toast(id ? 'Đã cập nhật' : 'Đã thêm địa điểm');
+    });
+
+    const cancelTime = () => {
+        pendingDrop = null;
+        $('timeModal')?.classList.add('hidden');
+    };
+
+    $('closeTimeBtn')?.addEventListener('click', cancelTime);
+    $('cancelTimeBtn')?.addEventListener('click', cancelTime);
+
+    $('confirmTimeBtn')?.addEventListener('click', () => {
+        if (!pendingDrop) return;
+
+        const place = find(pendingDrop.id);
+
+        if (place) {
+            place.date = pendingDrop.date;
+            place.time = $('scheduleTime')?.value || '09:00';
+        }
+
+        pendingDrop = null;
+        $('timeModal')?.classList.add('hidden');
+
+        render();
+        toast('Đã xếp lịch');
+    });
+
+    $('createTripBtn')?.addEventListener('click', updateTripFromForm);
+
+    // Keep the old reset button usable, but make it a true blank trip.
+    $('resetBtn')?.addEventListener('click', () => {
+        createNewTrip();
+    });
+
+    // Optional: close modals when clicking their backdrop.
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', event => {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+
+                if (modal.id === 'timeModal') {
+                    pendingDrop = null;
+                }
+            }
+        });
+    });
+}
+
+/* =========================================================
+   EXCEL
+========================================================= */
+
+function rowsForDate(date) {
+    return state.places
+        .filter(place => place.date === date)
+        .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+}
+
+function exportExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('Không tải được thư viện Excel. Hãy kiểm tra Internet.');
+        return;
     }
-    doc.save(`${state.trip.name.replace(/[^\wÀ-ỹ -]/g,'') || 'Trip'}-itinerary.pdf`);
-  }finally{ host.remove(); }
-};
-load(); render();
+
+    if (!state.trip.start || !state.trip.end) {
+        alert('Vui lòng chọn ngày cho chuyến đi trước khi xuất Excel.');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const days = datesBetween(state.trip.start, state.trip.end);
+
+    const aoa = [];
+    const merges = [];
+    const dayTitleRows = [];
+    const headerRows = [];
+    const totalRows = [];
+    const separatorRows = [];
+
+    aoa.push([state.trip.name || 'My Trip', '', '', '', '', '', '']);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
+
+    aoa.push([
+        `${localDate(state.trip.start)} → ${localDate(state.trip.end)}  •  ${state.trip.people} người`,
+        '', '', '', '', '', ''
+    ]);
+    merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 6 } });
+
+    aoa.push(['', '', '', '', '', '', '']);
+
+    days.forEach((date, index) => {
+        const titleRow = aoa.length;
+        dayTitleRows.push(titleRow);
+
+        aoa.push([
+            `DAY ${index + 1}  •  ${localDate(date)}`,
+            '', '', '', '', '', ''
+        ]);
+
+        merges.push({
+            s: { r: titleRow, c: 0 },
+            e: { r: titleRow, c: 6 }
+        });
+
+        const headerRow = aoa.length;
+        headerRows.push(headerRow);
+
+        aoa.push([
+            'Thời gian',
+            'Nội dung',
+            'Địa điểm',
+            'Chi phí',
+            'Ghi chú',
+            'Địa chỉ',
+            'Map'
+        ]);
+
+        const rows = rowsForDate(date);
+
+        rows.forEach(place => {
+            const menuText = place.menu?.length
+                ? place.menu
+                    .map(item => `${item.name}: ${money(item.price)}`)
+                    .join('\n')
+                : '';
+
+            const notes = [place.notes, menuText]
+                .filter(Boolean)
+                .join('\n');
+
+            aoa.push([
+                place.time || '',
+                place.category || '',
+                place.name || '',
+                Number(place.cost || 0),
+                notes,
+                place.address || '',
+                place.map || ''
+            ]);
+        });
+
+        const totalRow = aoa.length;
+        totalRows.push(totalRow);
+
+        const total = rows.reduce(
+            (sum, place) => sum + Number(place.cost || 0),
+            0
+        );
+
+        aoa.push([
+            '',
+            '',
+            'TỔNG CHI PHÍ NGÀY',
+            total,
+            '',
+            '',
+            ''
+        ]);
+
+        if (index < days.length - 1) {
+            const separatorRow = aoa.length;
+            separatorRows.push(separatorRow);
+
+            aoa.push(['', '', '', '', '', '', '']);
+            aoa.push(['', '', '', '', '', '', '']);
+        }
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = merges;
+
+    const green = '2C5951';
+    const green2 = '597355';
+    const greenLight = 'DCEBE2';
+    const pink = 'F2DCE2';
+    const pink2 = 'F2BDD0';
+    const pinkDark = 'BF5079';
+    const pale = 'FFF7F9';
+    const white = 'FFFFFF';
+    const ink = '263833';
+    const borderColor = 'D9E1DC';
+
+    const border = {
+        top: { style: 'thin', color: { rgb: borderColor } },
+        bottom: { style: 'thin', color: { rgb: borderColor } },
+        left: { style: 'thin', color: { rgb: borderColor } },
+        right: { style: 'thin', color: { rgb: borderColor } }
+    };
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+
+    for (let row = 0; row <= range.e.r; row++) {
+        for (let col = 0; col <= 6; col++) {
+            const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+            if (!ws[address]) {
+                ws[address] = { t: 's', v: '' };
+            }
+
+            ws[address].s = {
+                font: {
+                    name: 'Arial',
+                    sz: 10,
+                    color: { rgb: ink }
+                },
+                alignment: {
+                    vertical: 'center',
+                    wrapText: true
+                },
+                border,
+                fill: {
+                    fgColor: { rgb: white }
+                }
+            };
+        }
+    }
+
+    ws['A1'].s = {
+        fill: { fgColor: { rgb: pink } },
+        font: {
+            name: 'Arial',
+            sz: 20,
+            bold: true,
+            color: { rgb: green }
+        },
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    ws['A2'].s = {
+        fill: { fgColor: { rgb: pink } },
+        font: {
+            name: 'Arial',
+            sz: 11,
+            bold: true,
+            color: { rgb: green2 }
+        },
+        alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+        }
+    };
+
+    dayTitleRows.forEach((row, index) => {
+        for (let col = 0; col <= 6; col++) {
+            const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+            ws[address].s = {
+                fill: {
+                    fgColor: {
+                        rgb: index % 2 === 0 ? green : green2
+                    }
+                },
+                font: {
+                    name: 'Arial',
+                    sz: 14,
+                    bold: true,
+                    color: { rgb: white }
+                },
+                alignment: {
+                    horizontal: 'center',
+                    vertical: 'center'
+                },
+                border
+            };
+        }
+    });
+
+    headerRows.forEach(row => {
+        for (let col = 0; col <= 6; col++) {
+            const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+            ws[address].s = {
+                fill: { fgColor: { rgb: pinkDark } },
+                font: {
+                    name: 'Arial',
+                    sz: 10,
+                    bold: true,
+                    color: { rgb: white }
+                },
+                alignment: {
+                    horizontal: 'center',
+                    vertical: 'center',
+                    wrapText: true
+                },
+                border
+            };
+        }
+    });
+
+    headerRows.forEach((headerRow, index) => {
+        const totalRow = totalRows[index];
+
+        for (let row = headerRow + 1; row < totalRow; row++) {
+            for (let col = 0; col <= 6; col++) {
+                const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+                ws[address].s = {
+                    fill: {
+                        fgColor: {
+                            rgb: (row - headerRow) % 2 ? pale : 'F5FAF7'
+                        }
+                    },
+                    font: {
+                        name: 'Arial',
+                        sz: 10,
+                        color: { rgb: ink }
+                    },
+                    alignment: {
+                        vertical: 'center',
+                        wrapText: true
+                    },
+                    border
+                };
+            }
+
+            const timeCell = XLSX.utils.encode_cell({ r: row, c: 0 });
+            ws[timeCell].s.font = {
+                name: 'Arial',
+                sz: 10,
+                bold: true,
+                color: { rgb: green }
+            };
+
+            const costCell = XLSX.utils.encode_cell({ r: row, c: 3 });
+            ws[costCell].z = '#,##0" ₫"';
+            ws[costCell].s.alignment = {
+                horizontal: 'right',
+                vertical: 'center'
+            };
+        }
+    });
+
+    totalRows.forEach(row => {
+        for (let col = 0; col <= 6; col++) {
+            const address = XLSX.utils.encode_cell({ r: row, c: col });
+
+            ws[address].s = {
+                fill: { fgColor: { rgb: greenLight } },
+                font: {
+                    name: 'Arial',
+                    sz: 10,
+                    bold: true,
+                    color: { rgb: green }
+                },
+                alignment: {
+                    vertical: 'center',
+                    wrapText: true
+                },
+                border
+            };
+        }
+
+        ws[XLSX.utils.encode_cell({ r: row, c: 3 })].z = '#,##0" ₫"';
+    });
+
+    separatorRows.forEach(row => {
+        for (let rr = row; rr <= row + 1; rr++) {
+            for (let col = 0; col <= 6; col++) {
+                const address = XLSX.utils.encode_cell({ r: rr, c: col });
+
+                ws[address].s = {
+                    fill: {
+                        fgColor: {
+                            rgb: rr === row ? pink2 : pink
+                        }
+                    },
+                    font: {
+                        color: { rgb: pink2 }
+                    },
+                    alignment: {
+                        vertical: 'center'
+                    }
+                };
+            }
+        }
+    });
+
+    ws['!cols'] = [
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 28 },
+        { wch: 16 },
+        { wch: 35 },
+        { wch: 32 },
+        { wch: 38 }
+    ];
+
+    ws['!rows'] = aoa.map((_, row) => {
+        if (row === 0) return { hpt: 32 };
+        if (row === 1) return { hpt: 22 };
+        if (dayTitleRows.includes(row)) return { hpt: 27 };
+        if (headerRows.includes(row)) return { hpt: 24 };
+        if (separatorRows.includes(row) || separatorRows.includes(row - 1)) return { hpt: 8 };
+        return { hpt: 34 };
+    });
+
+    ws['!freeze'] = {
+        xSplit: 0,
+        ySplit: 3
+    };
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Trip Planner');
+
+    const detail = [[
+        'Ngày',
+        'Thời gian',
+        'Nội dung',
+        'Địa điểm',
+        'Địa chỉ',
+        'Chi phí',
+        'Ghi chú',
+        'Menu',
+        'Map'
+    ]];
+
+    days.forEach(date => {
+        rowsForDate(date).forEach(place => {
+            detail.push([
+                localDate(date),
+                place.time || '',
+                place.category || '',
+                place.name || '',
+                place.address || '',
+                Number(place.cost || 0),
+                place.notes || '',
+                place.menu?.map(item => `${item.name}: ${money(item.price)}`).join('\n') || '',
+                place.map || ''
+            ]);
+        });
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(detail);
+
+    ws2['!cols'] = [
+        { wch: 13 },
+        { wch: 10 },
+        { wch: 16 },
+        { wch: 25 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 35 },
+        { wch: 35 },
+        { wch: 35 }
+    ];
+
+    const range2 = XLSX.utils.decode_range(ws2['!ref']);
+
+    for (let col = 0; col <= range2.e.c; col++) {
+        const address = XLSX.utils.encode_cell({ r: 0, c: col });
+
+        ws2[address].s = {
+            fill: { fgColor: { rgb: green } },
+            font: {
+                bold: true,
+                color: { rgb: white }
+            },
+            alignment: {
+                horizontal: 'center'
+            },
+            border
+        };
+    }
+
+    for (let row = 1; row <= range2.e.r; row++) {
+        for (let col = 0; col <= range2.e.c; col++) {
+            const address = XLSX.utils.encode_cell({ r: row, c: col });
+            if (!ws2[address]) continue;
+
+            ws2[address].s = {
+                fill: {
+                    fgColor: {
+                        rgb: row % 2 ? pale : 'F5FAF7'
+                    }
+                },
+                font: {
+                    color: { rgb: ink }
+                },
+                alignment: {
+                    vertical: 'center',
+                    wrapText: true
+                },
+                border
+            };
+
+            if (col === 5) {
+                ws2[address].z = '#,##0" ₫"';
+            }
+        }
+    }
+
+    ws2['!autofilter'] = {
+        ref: ws2['!ref']
+    };
+
+    XLSX.utils.book_append_sheet(wb, ws2, 'Trip Details');
+
+    const filename =
+        (state.trip.name || 'Trip').replace(/[^\wÀ-ỹ -]/g, '') ||
+        'Trip';
+
+    XLSX.writeFile(wb, `${filename}-planner.xlsx`);
+}
+
+/* =========================================================
+   PDF
+========================================================= */
+
+function periodForTime(time) {
+    const hour = Number((time || '0:00').split(':')[0]);
+
+    if (hour < 11) return ['SÁNG', '☀'];
+    if (hour < 14) return ['TRƯA', ''];
+    if (hour < 18) return ['CHIỀU', ''];
+    return ['TỐI', '☾'];
+}
+
+function pdfPageHTML(date, dayNo) {
+    const rows = rowsForDate(date);
+    const groups = [];
+
+    rows.forEach(place => {
+        const [label, icon] = periodForTime(place.time);
+
+        let group = groups.find(item => item.label === label);
+
+        if (!group) {
+            group = {
+                label,
+                icon,
+                items: []
+            };
+
+            groups.push(group);
+        }
+
+        group.items.push(place);
+    });
+
+    const total = rows.reduce(
+        (sum, place) => sum + Number(place.cost || 0),
+        0
+    );
+
+    return `
+        <section class="pdf-sheet">
+
+            <div class="pdf-top">
+                <div class="pdf-kicker">LỊCH TRÌNH DU LỊCH</div>
+                <div class="pdf-trip">${esc(state.trip.name)}</div>
+                <div class="pdf-day">DAY ${dayNo}</div>
+                <div class="pdf-date">${localDate(date)}</div>
+            </div>
+
+            <div class="pdf-body">
+
+                ${groups.map(group => `
+                    <div class="pdf-period">
+
+                        <div class="pdf-period-title">
+                            ${group.label}
+                            <span>${group.icon}</span>
+                        </div>
+
+                        ${group.items.map(place => `
+                            <div class="pdf-row">
+
+                                <div class="pdf-time">
+                                    ${esc(place.time || '')}
+                                </div>
+
+                                <div class="pdf-info">
+
+                                    <div class="pdf-place">
+                                        ${esc(place.name)}
+                                    </div>
+
+                                    <div class="pdf-category">
+                                        ${esc(place.category)}
+                                        ${place.address ? ` • ${esc(place.address)}` : ''}
+                                    </div>
+
+                                    ${
+                                        place.menu?.length
+                                            ? `
+                                                <div class="pdf-note">
+                                                    ${place.menu.map(item =>
+                                                        `${esc(item.name)} — ${money(item.price)}`
+                                                    ).join(' • ')}
+                                                </div>
+                                            `
+                                            : ''
+                                    }
+
+                                    ${
+                                        place.notes
+                                            ? `<div class="pdf-note">${esc(place.notes)}</div>`
+                                            : ''
+                                    }
+
+                                </div>
+
+                                <div class="pdf-cost">
+                                    ${place.cost ? money(place.cost) : ''}
+                                </div>
+
+                            </div>
+                        `).join('')}
+
+                    </div>
+                `).join('')}
+
+                ${
+                    rows.length
+                        ? ''
+                        : `<div class="pdf-empty">Chưa có hoạt động cho ngày này.</div>`
+                }
+
+            </div>
+
+            <div class="pdf-footer">
+                <span>Chi phí ngày</span>
+                <strong>${money(total)}</strong>
+            </div>
+
+        </section>
+    `;
+}
+
+async function exportPDF() {
+    if (!window.jspdf || !window.html2canvas) {
+        alert('Không tải được thư viện PDF. Hãy kiểm tra Internet.');
+        return;
+    }
+
+    const days = datesBetween(state.trip.start, state.trip.end);
+
+    if (!days.length) {
+        alert('Vui lòng chọn ngày cho chuyến đi trước khi xuất PDF.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+
+    const host = document.createElement('div');
+    host.className = 'pdf-render-host';
+    host.innerHTML = days
+        .map((date, index) => pdfPageHTML(date, index + 1))
+        .join('');
+
+    document.body.appendChild(host);
+
+    try {
+        if (document.fonts?.ready) {
+            await document.fonts.ready;
+        }
+
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+
+        const pages = [...host.querySelectorAll('.pdf-sheet')];
+
+        for (let index = 0; index < pages.length; index++) {
+            if (index > 0) doc.addPage();
+
+            const canvas = await html2canvas(pages[index], {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false
+            });
+
+            const img = canvas.toDataURL('image/jpeg', 0.94);
+
+            doc.addImage(
+                img,
+                'JPEG',
+                0,
+                0,
+                210,
+                297,
+                undefined,
+                'FAST'
+            );
+        }
+
+        const filename =
+            (state.trip.name || 'Trip').replace(/[^\wÀ-ỹ -]/g, '') ||
+            'Trip';
+
+        doc.save(`${filename}-itinerary.pdf`);
+    } finally {
+        host.remove();
+    }
+}
+
+/* =========================================================
+   START APP
+========================================================= */
+
+async function init() {
+    load();
+    bindStaticEvents();
+    $('excelBtn')?.addEventListener('click', exportExcel);
+    $('pdfBtn')?.addEventListener('click', exportPDF);
+    render();
+
+    try {
+        await ensureFirebaseAuth();
+        startTripsSync();
+    } catch (error) {
+        console.error('Firebase authentication failed:', error);
+        toast('Không kết nối được Firebase. Dữ liệu tạm thời chỉ ở máy này.');
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
