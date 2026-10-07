@@ -77,8 +77,10 @@
       </div>
       <div class="budget-stats">
         <div><span>Ngân sách</span><strong id="budgetTotal">0 ₫</strong></div>
-        <div><span>Đã dự kiến chi</span><strong id="budgetSpent">0 ₫</strong></div>
-        <div><span>Còn lại</span><strong id="budgetRemaining">0 ₫</strong></div>
+        <div><span>Đã chi thực tế</span><strong id="budgetSpent">0 ₫</strong></div>
+        <div><span>Lịch chưa đi</span><strong id="budgetPlanned">0 ₫</strong></div>
+        <div><span>Dự kiến tổng</span><strong id="budgetExpected">0 ₫</strong></div>
+        <div><span>Dự kiến còn lại</span><strong id="budgetRemaining">0 ₫</strong></div>
       </div>
       <div class="budget-progress" aria-label="Tiến độ sử dụng ngân sách">
         <div class="budget-progress-fill" id="budgetProgressFill"></div>
@@ -94,6 +96,10 @@
             <h2>Địa điểm chưa xếp</h2>
           </div>
           <span class="count" id="unscheduledCount">0</span>
+        </div>
+        <div class="place-filter" aria-label="Lọc địa điểm theo chức năng">
+          <div class="place-filter-label">Lọc theo chức năng</div>
+          <div class="place-filter-chips" id="placeFilterChips"></div>
         </div>
         <button class="btn add-place" id="addPlaceBtn">＋ Thêm địa điểm</button>
         <p class="hint">Kéo card sang bất kỳ ngày nào. Thả card về đây để bỏ khỏi lịch.</p>
@@ -255,6 +261,65 @@
 </div>
 
   
+
+
+  <!-- CHECK-IN MODAL -->
+  <div class="modal hidden" id="checkinModal">
+    <div class="modal-panel checkin-panel">
+      <button type="button" class="modal-close" id="closeCheckinBtn">×</button>
+      <span class="mini-label">TRIP CHECK-IN</span>
+      <h2>✓ Hoàn thành địa điểm</h2>
+      <input type="hidden" id="checkinPlaceId">
+      <p class="checkin-place-name" id="checkinPlaceName"></p>
+      <div class="checkin-planned">Chi phí dự kiến: <strong id="checkinPlannedCost">0 ₫</strong></div>
+      <label>Chi phí thực tế (VND)
+        <input id="actualCost" type="number" min="0" step="1000" value="0">
+      </label>
+      <label>Ghi chú thực tế
+        <textarea id="checkinNote" rows="3" placeholder="Ví dụ: thêm đồ uống, vé phát sinh..."></textarea>
+      </label>
+      <div class="modal-actions checkin-actions">
+        <button type="button" class="btn danger-soft hidden" id="undoCheckinBtn">Bỏ check-in</button>
+        <button type="button" class="btn secondary" id="cancelCheckinBtn">Hủy</button>
+        <button type="button" class="btn primary" id="confirmCheckinBtn">✓ Hoàn thành</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOW BUDGET WARNING -->
+  <div class="modal hidden" id="budgetWarningModal">
+    <div class="modal-panel warning-panel">
+      <span class="warning-icon">⚠️</span>
+      <span class="mini-label">LOW BUDGET</span>
+      <h2>Sắp hết ngân sách</h2>
+      <p id="warningBudgetText"></p>
+      <p>Bạn muốn tăng ngân sách hay cắt giảm những địa điểm chưa đi?</p>
+      <div class="warning-actions">
+        <button type="button" class="btn outline" id="addBudgetBtn">💰 Thêm ngân sách</button>
+        <button type="button" class="btn secondary" id="cutBudgetBtn">✂ Cắt lịch trình</button>
+        <button type="button" class="btn primary" id="keepBudgetBtn">Giữ lịch hiện tại</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUT ITINERARY MODAL -->
+  <div class="modal hidden" id="cutItineraryModal">
+    <div class="modal-panel cut-panel">
+      <button type="button" class="modal-close" id="closeCutBtn">×</button>
+      <span class="mini-label">CUT ITINERARY</span>
+      <h2>Cắt giảm lịch trình</h2>
+      <p>Chọn các địa điểm chưa check-in mà bạn muốn bỏ khỏi chuyến hiện tại. Địa điểm vẫn được giữ trong Place Bank.</p>
+      <div id="cutItineraryList" class="cut-list"></div>
+      <div class="cut-summary">
+        <span>Tiết kiệm: <strong id="cutSavings">0 ₫</strong></span>
+        <span>Dự kiến còn sau khi cắt: <strong id="cutAfter">0 ₫</strong></span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" id="cancelCutBtn">Hủy</button>
+        <button type="button" class="btn primary" id="applyCutBtn">Xóa khỏi lịch</button>
+      </div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 

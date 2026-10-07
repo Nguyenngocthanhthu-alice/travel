@@ -81,6 +81,7 @@ let pendingDrop = null;
 let currentMenu = [];
 let placeBank = [];
 let placeBankReady = false;
+let activePlaceFilter = 'Tất cả';
 
 function uid() {
     return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -164,6 +165,71 @@ function saveLocalPlaceBank() {
     localStorage.setItem(PLACE_BANK_STORAGE_KEY, JSON.stringify(placeBank));
 }
 
+
+// Duplicate cleanup:
+// Same name is still allowed. A card is only considered duplicated when
+// all Place Bank details are the same (name, category, address, cost,
+// notes, map and menu). IDs, trip date/time and check-in data are ignored.
+function placeDuplicateKey(place = {}) {
+    const normal = value => String(value ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi');
+
+    const menu = Array.isArray(place.menu)
+        ? place.menu.map(item => ({
+            name: normal(item?.name),
+            price: Math.max(0, Number(item?.price || 0))
+        }))
+        : [];
+
+    return JSON.stringify({
+        name: normal(place.name),
+        category: normal(place.category || 'Tham quan'),
+        address: normal(place.address),
+        cost: Math.max(0, Number(place.cost || 0)),
+        notes: normal(place.notes),
+        map: normal(place.map),
+        menu
+    });
+}
+
+function removeExactPlaceDuplicates(places = []) {
+    const seenIds = new Set();
+    const seenContent = new Set();
+    const clean = [];
+
+    for (const rawPlace of places) {
+        if (!rawPlace) continue;
+
+        const place = placeTemplate(rawPlace);
+
+        // Same ID repeated = definitely duplicated.
+        if (seenIds.has(place.id)) continue;
+
+        // Different IDs are only merged when the entire Place Bank card
+        // content is identical. Same name alone is NOT treated as duplicate.
+        const contentKey = placeDuplicateKey(place);
+        if (seenContent.has(contentKey)) continue;
+
+        seenIds.add(place.id);
+        seenContent.add(contentKey);
+        clean.push(place);
+    }
+
+    return clean;
+}
+
+function cleanPlaceBankDuplicates() {
+    const before = placeBank.length;
+    placeBank = removeExactPlaceDuplicates(placeBank);
+
+    if (placeBank.length !== before) {
+        saveLocalPlaceBank();
+        console.info(`Removed ${before - placeBank.length} duplicated Place Bank card(s).`);
+        return true;
+    }
+
+    return false;
+}
+
 function mergePlacesIntoBank(places = []) {
     let changed = false;
 
@@ -171,24 +237,33 @@ function mergePlacesIntoBank(places = []) {
         if (!place || !place.id) return;
 
         const clean = placeTemplate(place);
-        const index = placeBank.findIndex(item => item.id === clean.id);
 
-        if (index === -1) {
+        const sameIdIndex = placeBank.findIndex(item => item.id === clean.id);
+        if (sameIdIndex !== -1) {
+            const before = JSON.stringify(placeBank[sameIdIndex]);
+            placeBank[sameIdIndex] = { ...placeBank[sameIdIndex], ...clean };
+            if (JSON.stringify(placeBank[sameIdIndex]) !== before) changed = true;
+            return;
+        }
+
+        // IMPORTANT: same name is allowed.
+        // Only block a second card when ALL Place Bank details are identical.
+        const cleanKey = placeDuplicateKey(clean);
+        const exactDuplicate = placeBank.some(item => placeDuplicateKey(item) === cleanKey);
+
+        if (!exactDuplicate) {
             placeBank.push(clean);
             changed = true;
-        } else {
-            // Keep the latest details from a trip when migrating old data.
-            const before = JSON.stringify(placeBank[index]);
-            placeBank[index] = { ...placeBank[index], ...clean };
-            if (JSON.stringify(placeBank[index]) !== before) changed = true;
         }
     });
 
+    if (cleanPlaceBankDuplicates()) changed = true;
     if (changed) saveLocalPlaceBank();
     return changed;
 }
 
 async function savePlaceBank() {
+    cleanPlaceBankDuplicates();
     saveLocalPlaceBank();
 
     try {
@@ -219,12 +294,11 @@ async function loadPlaceBankFromFirebase() {
             const data = snap.data() || {};
             const remote = Array.isArray(data.places) ? data.places.map(placeTemplate) : [];
 
-            // Merge local-only places so upgrading the app does not lose old data.
-            const byId = new Map(remote.map(place => [place.id, place]));
-            placeBank.forEach(place => {
-                if (!byId.has(place.id)) byId.set(place.id, place);
-            });
-            placeBank = Array.from(byId.values());
+            // Start with Firebase data, then merge local data safely.
+            // Same names are allowed; only exact duplicate cards are collapsed.
+            const localPlaces = clone(placeBank);
+            placeBank = removeExactPlaceDuplicates(remote);
+            mergePlacesIntoBank(localPlaces);
         }
 
         // Migrate places from the currently loaded old-format trip into the shared bank.
@@ -244,7 +318,11 @@ function scheduleForTrip() {
         .map(place => ({
             id: place.id,
             date: place.date,
-            time: place.time || null
+            time: place.time || null,
+            checkedIn: Boolean(place.checkedIn),
+            checkedInAt: place.checkedInAt || null,
+            actualCost: place.actualCost === null || place.actualCost === undefined ? null : Number(place.actualCost),
+            checkinNote: place.checkinNote || ''
         }));
 }
 
@@ -270,8 +348,12 @@ function buildTripPlaces(saved) {
 
         return {
             ...placeTemplate(source),
-            date: entry.date || null,
-            time: entry.time || null
+            date: entry.date || legacyPlace?.date || null,
+            time: entry.time || legacyPlace?.time || null,
+            checkedIn: Boolean(entry.checkedIn ?? legacyPlace?.checkedIn ?? false),
+            checkedInAt: entry.checkedInAt || legacyPlace?.checkedInAt || null,
+            actualCost: entry.actualCost ?? legacyPlace?.actualCost ?? null,
+            checkinNote: entry.checkinNote || legacyPlace?.checkinNote || ''
         };
     }).filter(Boolean);
 }
@@ -416,6 +498,10 @@ function normalizeState() {
         if (!Array.isArray(place.menu)) place.menu = [];
         if (place.date === undefined) place.date = null;
         if (place.time === undefined) place.time = null;
+        if (place.checkedIn === undefined) place.checkedIn = false;
+        if (place.checkedInAt === undefined) place.checkedInAt = null;
+        if (place.actualCost === undefined) place.actualCost = null;
+        if (place.checkinNote === undefined) place.checkinNote = '';
     });
 }
 
@@ -555,6 +641,10 @@ function renderSavedTrips() {
     }).join('');
 }
 
+function closeTripsModal() {
+    $('tripsModal')?.classList.add('hidden');
+}
+
 function openSavedTrip(tripId) {
     const saved = getSavedTrips().find(item => item.id === tripId);
     if (!saved) {
@@ -670,53 +760,71 @@ function syncTripFromInputs() {
 
 function budgetSnapshot() {
     const budget = Math.max(0, Number(state.trip?.budget || 0));
-    const spent = state.places.reduce(
-        (sum, place) => sum + Math.max(0, Number(place.cost || 0)),
-        0
-    );
-    return { budget, spent, remaining: budget - spent };
+    const scheduled = (state.places || []).filter(place => place.date);
+
+    const actualSpent = scheduled.reduce((sum, place) => {
+        if (!place.checkedIn) return sum;
+        return sum + Math.max(0, Number(place.actualCost ?? place.cost ?? 0));
+    }, 0);
+
+    const plannedUpcoming = scheduled.reduce((sum, place) => {
+        if (place.checkedIn) return sum;
+        return sum + Math.max(0, Number(place.cost || 0));
+    }, 0);
+
+    const expectedTotal = actualSpent + plannedUpcoming;
+    const cashRemaining = budget - actualSpent;
+    const expectedRemaining = budget - expectedTotal;
+
+    return { budget, actualSpent, plannedUpcoming, expectedTotal, cashRemaining, expectedRemaining };
 }
 
 function remainingBudgetText() {
-    const { budget, remaining } = budgetSnapshot();
+    const { budget, expectedRemaining } = budgetSnapshot();
     if (!budget) return 'Chưa nhập ngân sách';
-    return remaining >= 0
-        ? `Còn lại ${money(remaining)}`
-        : `Vượt ${money(Math.abs(remaining))}`;
+    return expectedRemaining >= 0
+        ? `Dự kiến còn ${money(expectedRemaining)}`
+        : `Dự kiến thiếu ${money(Math.abs(expectedRemaining))}`;
 }
 
 function renderBudget() {
-    const { budget, spent, remaining } = budgetSnapshot();
+    const { budget, actualSpent, plannedUpcoming, expectedTotal, cashRemaining, expectedRemaining } = budgetSnapshot();
 
     if ($('budgetTotal')) $('budgetTotal').textContent = money(budget);
-    if ($('budgetSpent')) $('budgetSpent').textContent = money(spent);
-    if ($('budgetRemaining')) $('budgetRemaining').textContent = money(remaining);
+    if ($('budgetSpent')) $('budgetSpent').textContent = money(actualSpent);
+    if ($('budgetPlanned')) $('budgetPlanned').textContent = money(plannedUpcoming);
+    if ($('budgetExpected')) $('budgetExpected').textContent = money(expectedTotal);
+    if ($('budgetRemaining')) $('budgetRemaining').textContent = money(expectedRemaining);
 
     const card = $('budgetCard');
     const status = $('budgetStatus');
     const note = $('budgetNote');
     const fill = $('budgetProgressFill');
 
-    card?.classList.toggle('budget-over', budget > 0 && remaining < 0);
+    card?.classList.toggle('budget-over', budget > 0 && expectedRemaining < 0);
+    card?.classList.toggle('budget-low', budget > 0 && expectedRemaining >= 0 && expectedRemaining / budget <= 0.20);
 
     if (!budget) {
         if (status) status.textContent = 'Chưa nhập ngân sách';
-        if (note) note.textContent = 'Nhập ngân sách ở phần Thông tin chuyến đi để theo dõi số tiền còn lại.';
+        if (note) note.textContent = 'Nhập ngân sách để theo dõi chi phí thực tế và dự kiến.';
         if (fill) fill.style.width = '0%';
         return;
     }
 
-    if (remaining < 0) {
-        if (status) status.textContent = `⚠ Vượt ${money(Math.abs(remaining))}`;
-        if (note) note.textContent = 'Tổng chi phí dự kiến đã vượt ngân sách chuyến đi.';
+    if (expectedRemaining < 0) {
+        if (status) status.textContent = `🔴 Dự kiến thiếu ${money(Math.abs(expectedRemaining))}`;
+        if (note) note.textContent = `Đã chi ${money(actualSpent)} • Còn lịch dự kiến ${money(plannedUpcoming)}.`;
+    } else if (expectedRemaining / budget <= 0.20) {
+        if (status) status.textContent = `🟠 Sắp hết tiền • dự kiến còn ${money(expectedRemaining)}`;
+        if (note) note.textContent = 'Ngân sách dự kiến còn dưới 20%. Bạn có thể tăng ngân sách hoặc cắt giảm lịch trình.';
     } else {
-        const percentLeft = Math.max(0, Math.round((remaining / budget) * 100));
-        if (status) status.textContent = `${percentLeft}% còn lại`;
-        if (note) note.textContent = `Bạn còn ${money(remaining)} trong ngân sách.`;
+        const percentLeft = Math.max(0, Math.round((expectedRemaining / budget) * 100));
+        if (status) status.textContent = `🟢 ${percentLeft}% dự kiến còn lại`;
+        if (note) note.textContent = `Đã chi thực tế ${money(actualSpent)} • Sau toàn bộ lịch dự kiến còn ${money(expectedRemaining)}.`;
     }
 
     if (fill) {
-        const usedPercent = Math.min(100, Math.max(0, (spent / budget) * 100));
+        const usedPercent = Math.min(100, Math.max(0, (expectedTotal / budget) * 100));
         fill.style.width = `${usedPercent}%`;
     }
 }
@@ -736,6 +844,42 @@ function applyDateLimits() {
         ? startInput.value
         : today;
     endInput.min = startForLimit;
+}
+
+function renderPlaceFilters(availablePlaces = []) {
+    const container = $('placeFilterChips');
+    if (!container) return;
+
+    const preferredOrder = [
+        'Tham quan', 'Ăn uống', 'Cà phê', 'Check-in', 'Di chuyển',
+        'Khách sạn', 'Thuê đồ', 'Mua sắm', 'Nghỉ ngơi', 'Khác'
+    ];
+
+    const existing = new Set(
+        availablePlaces
+            .map(place => String(place.category || 'Khác').trim() || 'Khác')
+    );
+
+    const categories = [
+        ...preferredOrder.filter(category => existing.has(category)),
+        ...Array.from(existing)
+            .filter(category => !preferredOrder.includes(category))
+            .sort((a, b) => a.localeCompare(b, 'vi'))
+    ];
+
+    // If the selected category no longer exists, return to All.
+    if (activePlaceFilter !== 'Tất cả' && !existing.has(activePlaceFilter)) {
+        activePlaceFilter = 'Tất cả';
+    }
+
+    const buttons = ['Tất cả', ...categories];
+    container.innerHTML = buttons.map(category => `
+        <button
+            type="button"
+            class="place-filter-chip ${activePlaceFilter === category ? 'active' : ''}"
+            data-place-filter="${esc(category)}"
+        >${esc(category)}</button>
+    `).join('');
 }
 
 function render() {
@@ -764,12 +908,18 @@ function render() {
         .filter(place => !scheduledIds.has(place.id))
         .map(place => ({ ...clone(place), date: null, time: null }));
 
-    if ($('unscheduledCount')) $('unscheduledCount').textContent = unscheduled.length;
+    renderPlaceFilters(unscheduled);
+
+    const filteredUnscheduled = activePlaceFilter === 'Tất cả'
+        ? unscheduled
+        : unscheduled.filter(place => (place.category || 'Khác') === activePlaceFilter);
+
+    if ($('unscheduledCount')) $('unscheduledCount').textContent = filteredUnscheduled.length;
 
     if ($('unscheduledList')) {
         $('unscheduledList').innerHTML =
-            unscheduled.map(placeCard).join('') ||
-            `<div class="empty-day">Chưa có địa điểm chờ xếp lịch.</div>`;
+            filteredUnscheduled.map(placeCard).join('') ||
+            `<div class="empty-day">Không có địa điểm thuộc bộ lọc “${esc(activePlaceFilter)}”.</div>`;
     }
 
     if ($('daysContainer')) {
@@ -779,7 +929,7 @@ function render() {
                 .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
             const total = items.reduce(
-                (sum, place) => sum + Number(place.cost || 0),
+                (sum, place) => sum + Number(place.checkedIn ? (place.actualCost ?? place.cost ?? 0) : (place.cost || 0)),
                 0
             );
 
@@ -815,7 +965,7 @@ function render() {
     if ($('costTotal')) {
         $('costTotal').textContent = money(
             scheduled.reduce(
-                (sum, place) => sum + Number(place.cost || 0),
+                (sum, place) => sum + Number(place.checkedIn ? (place.actualCost ?? place.cost ?? 0) : (place.cost || 0)),
                 0
             )
         );
@@ -827,76 +977,155 @@ function render() {
 }
 
 function placeCard(place) {
-    return `
-        <div
-    class="place-card"
-    draggable="true"
-    data-id="${place.id}"
-    data-category="${esc(place.category || '')}"
->
+    const checked = Boolean(place.checkedIn);
+    const actual = place.actualCost === null || place.actualCost === undefined
+        ? Number(place.cost || 0)
+        : Number(place.actualCost);
 
+    return `
+        <div class="place-card ${checked ? 'checked-in' : ''}" draggable="true" data-id="${place.id}" data-category="${esc(place.category || '')}">
             <div class="place-top">
                 <div>
-                    <div class="place-name">${esc(place.name)}</div>
+                    <div class="place-name">${checked ? '✓ ' : ''}${esc(place.name)}</div>
                     <div class="category">${esc(place.category)}</div>
                 </div>
-
-${place.date && place.time ? `
-    <button
-        type="button"
-        class="place-time-btn"
-        data-place-action="time"
-        data-place-id="${place.id}"
-        title="Chỉnh sửa giờ"
-    >
-        🕐 ${esc(place.time)}
-    </button>
-` : ''}            </div>
+                ${place.date && place.time ? `
+                    <button type="button" class="place-time-btn" data-place-action="time" data-place-id="${place.id}" title="Chỉnh sửa giờ">
+                        🕐 ${esc(place.time)}
+                    </button>
+                ` : ''}
+            </div>
 
             <div class="place-meta">
                 ${place.address ? `📍 ${esc(place.address)}<br>` : ''}
+                <span class="cost">💰 Dự kiến: ${money(place.cost)}</span>
+                ${checked ? `<div class="actual-cost">✓ Thực tế: <strong>${money(actual)}</strong></div>` : ''}
+                ${checked && place.checkedInAt ? `<div class="checkin-time">Check-in: ${esc(formatCheckinTime(place.checkedInAt))}</div>` : ''}
+                ${checked && place.checkinNote ? `<div class="checkin-note">📝 ${esc(place.checkinNote)}</div>` : ''}
 
-                <span class="cost">💰 ${money(place.cost)}</span>
-
-                ${
-                    place.menu?.length
-                        ? `
-                            <div class="card-menu">
-                                ${place.menu.map(item => `
-                                    <div class="card-menu-item">
-                                        <span>• ${esc(item.name)}</span>
-                                        <strong>${money(item.price)}</strong>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `
-                        : ''
-                }
+                ${place.menu?.length ? `
+                    <div class="card-menu">
+                        ${place.menu.map(item => `
+                            <div class="card-menu-item"><span>• ${esc(item.name)}</span><strong>${money(item.price)}</strong></div>
+                        `).join('')}
+                    </div>
+                ` : ''}
 
                 ${place.notes ? `<br>📝 ${esc(place.notes)}` : ''}
-
-                ${
-                    place.map
-                        ? `<br><a class="map-link" href="${esc(place.map)}" target="_blank" rel="noopener noreferrer">↗ Mở bản đồ / link</a>`
-                        : ''
-                }
+                ${place.map ? `<br><a class="map-link" href="${esc(place.map)}" target="_blank" rel="noopener noreferrer">↗ Mở bản đồ / link</a>` : ''}
             </div>
 
             <div class="card-actions">
+                ${place.date ? `
+                    <button type="button" class="mini-btn checkin-btn ${checked ? 'checked' : ''}" data-place-action="checkin" data-place-id="${esc(place.id)}">
+                        ${checked ? '✓ Sửa check-in' : '✓ Check in'}
+                    </button>
+                ` : ''}
                 <button type="button" class="mini-btn" data-place-action="edit" data-place-id="${esc(place.id)}">✎ Sửa</button>
                 <button type="button" class="mini-btn" data-place-action="duplicate" data-place-id="${esc(place.id)}">⧉ Copy</button>
-
-                ${
-                    place.date
-                        ? `<button type="button" class="mini-btn" data-place-action="unschedule" data-place-id="${esc(place.id)}">↩ Bỏ lịch</button>`
-                        : ''
-                }
-
+                ${place.date ? `<button type="button" class="mini-btn" data-place-action="unschedule" data-place-id="${esc(place.id)}">↩ Bỏ lịch</button>` : ''}
                 <button type="button" class="mini-btn" data-place-action="delete" data-place-id="${esc(place.id)}">× Xóa</button>
             </div>
-
         </div>
     `;
+}
+
+function formatCheckinTime(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function openCheckinModal(id) {
+    const place = state.places.find(item => item.id === id && item.date);
+    if (!place) return;
+    $('checkinPlaceId').value = place.id;
+    $('checkinPlaceName').textContent = place.name;
+    $('checkinPlannedCost').textContent = money(place.cost);
+    $('actualCost').value = place.actualCost ?? place.cost ?? 0;
+    $('checkinNote').value = place.checkinNote || '';
+    $('undoCheckinBtn')?.classList.toggle('hidden', !place.checkedIn);
+    $('checkinModal')?.classList.remove('hidden');
+}
+
+function closeCheckinModal() {
+    $('checkinModal')?.classList.add('hidden');
+}
+
+function completeCheckin() {
+    const id = $('checkinPlaceId')?.value;
+    const place = state.places.find(item => item.id === id);
+    if (!place) return;
+    place.checkedIn = true;
+    place.checkedInAt = place.checkedInAt || new Date().toISOString();
+    place.actualCost = Math.max(0, Number($('actualCost')?.value || 0));
+    place.checkinNote = $('checkinNote')?.value.trim() || '';
+    closeCheckinModal();
+    render();
+    saveCurrentTrip();
+    toast(`Đã check-in ${place.name} • ${remainingBudgetText()}`);
+    setTimeout(showBudgetWarningIfNeeded, 100);
+}
+
+function undoCheckin() {
+    const id = $('checkinPlaceId')?.value;
+    const place = state.places.find(item => item.id === id);
+    if (!place) return;
+    place.checkedIn = false;
+    place.checkedInAt = null;
+    place.actualCost = null;
+    place.checkinNote = '';
+    closeCheckinModal();
+    render();
+    saveCurrentTrip();
+    toast('Đã bỏ trạng thái check-in.');
+}
+
+function showBudgetWarningIfNeeded() {
+    const snap = budgetSnapshot();
+    if (!snap.budget) return;
+    const low = snap.expectedRemaining < 0 || snap.expectedRemaining / snap.budget <= 0.20;
+    if (!low) return;
+    $('warningBudgetText').textContent = snap.expectedRemaining < 0
+        ? `Bạn đang dự kiến thiếu ${money(Math.abs(snap.expectedRemaining))}.`
+        : `Bạn chỉ còn dự kiến ${money(snap.expectedRemaining)} (${Math.max(0, Math.round(snap.expectedRemaining / snap.budget * 100))}% ngân sách).`;
+    $('budgetWarningModal')?.classList.remove('hidden');
+}
+
+function openCutItinerary() {
+    const upcoming = state.places
+        .filter(place => place.date && !place.checkedIn)
+        .sort((a,b) => `${a.date}${a.time || ''}`.localeCompare(`${b.date}${b.time || ''}`));
+    const box = $('cutItineraryList');
+    if (!box) return;
+    box.innerHTML = upcoming.length ? upcoming.map(place => `
+        <label class="cut-item">
+            <input type="checkbox" data-cut-place="${esc(place.id)}" data-cut-cost="${Number(place.cost || 0)}">
+            <span><strong>${esc(place.name)}</strong><small>${localDate(place.date)} ${esc(place.time || '')}</small></span>
+            <b>${money(place.cost)}</b>
+        </label>
+    `).join('') : '<p>Không còn địa điểm chưa check-in để cắt giảm.</p>';
+    updateCutSavings();
+    $('budgetWarningModal')?.classList.add('hidden');
+    $('cutItineraryModal')?.classList.remove('hidden');
+}
+
+function updateCutSavings() {
+    const selected = [...document.querySelectorAll('[data-cut-place]:checked')];
+    const savings = selected.reduce((sum, input) => sum + Number(input.dataset.cutCost || 0), 0);
+    if ($('cutSavings')) $('cutSavings').textContent = money(savings);
+    if ($('cutAfter')) $('cutAfter').textContent = money(budgetSnapshot().expectedRemaining + savings);
+}
+
+function applyCutItinerary() {
+    const ids = new Set([...document.querySelectorAll('[data-cut-place]:checked')].map(input => input.dataset.cutPlace));
+    if (!ids.size) { toast('Hãy chọn ít nhất một địa điểm.'); return; }
+    state.places = state.places.filter(place => !ids.has(place.id));
+    $('cutItineraryModal')?.classList.add('hidden');
+    render();
+    saveCurrentTrip();
+    toast(`Đã cắt ${ids.size} mục khỏi lịch • ${remainingBudgetText()}`);
 }
 
 function find(id) {
@@ -1226,12 +1455,18 @@ function bindStaticEvents() {
         $('tripsModal')?.classList.remove('hidden');
     });
 
-    $('closeTripsModal')?.addEventListener('click', () => {
-        $('tripsModal')?.classList.add('hidden');
-    });
+    $('closeTripsModal')?.addEventListener('click', closeTripsModal);
 
     $('newTripBtn')?.addEventListener('click', createNewTrip);
     $('createTripFromListBtn')?.addEventListener('click', createNewTrip);
+
+    $('placeFilterChips')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-place-filter]');
+        if (!button) return;
+
+        activePlaceFilter = button.dataset.placeFilter || 'Tất cả';
+        render();
+    });
 
     // Dynamic saved-trip buttons: event delegation
     $('savedTripsList')?.addEventListener('click', event => {
@@ -1262,6 +1497,7 @@ function bindStaticEvents() {
         if (action === 'unschedule') unschedulePlace(id);
         if (action === 'delete') deletePlaceById(id);
         if (action === 'time') editPlaceTime(id);
+        if (action === 'checkin') openCheckinModal(id);
     });
 
     $('addPlaceBtn')?.addEventListener('click', () => openPlaceModal());
@@ -1434,6 +1670,23 @@ function bindStaticEvents() {
         `Đã xếp lịch lúc ${selectedTime} • ${remainingBudgetText()}`
     );
 });
+
+    $('closeCheckinBtn')?.addEventListener('click', closeCheckinModal);
+    $('cancelCheckinBtn')?.addEventListener('click', closeCheckinModal);
+    $('confirmCheckinBtn')?.addEventListener('click', completeCheckin);
+    $('undoCheckinBtn')?.addEventListener('click', undoCheckin);
+
+    $('keepBudgetBtn')?.addEventListener('click', () => $('budgetWarningModal')?.classList.add('hidden'));
+    $('addBudgetBtn')?.addEventListener('click', () => {
+        $('budgetWarningModal')?.classList.add('hidden');
+        $('tripBudget')?.focus();
+        $('tripBudget')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    $('cutBudgetBtn')?.addEventListener('click', openCutItinerary);
+    $('closeCutBtn')?.addEventListener('click', () => $('cutItineraryModal')?.classList.add('hidden'));
+    $('cancelCutBtn')?.addEventListener('click', () => $('cutItineraryModal')?.classList.add('hidden'));
+    $('applyCutBtn')?.addEventListener('click', applyCutItinerary);
+    $('cutItineraryList')?.addEventListener('change', updateCutSavings);
 
     $('createTripBtn')?.addEventListener('click', updateTripFromForm);
 
@@ -2117,6 +2370,7 @@ async function exportPDF() {
 async function init() {
     load();
     loadLocalPlaceBank();
+    cleanPlaceBankDuplicates();
 
     // Upgrade old data: places already created in the current trip become permanent.
     mergePlacesIntoBank(state.places || []);
