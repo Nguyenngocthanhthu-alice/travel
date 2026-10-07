@@ -9,6 +9,7 @@ let state = {
   ]
 };
 let pendingDrop = null;
+let currentMenu = [];
 
 function uid(){ return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function $(id){ return document.getElementById(id); }
@@ -62,6 +63,27 @@ function placeCard(p){
     <div class="place-meta">
       ${p.address?`📍 ${esc(p.address)}<br>`:''}
       <span class="cost">💰 ${money(p.cost)}</span>
+      ${p.menu?.length ? `
+
+    <div class="card-menu">
+
+        ${p.menu.map(item => `
+
+            <div class="card-menu-item">
+
+                <span>• ${esc(item.name)}</span>
+
+                <strong>
+                    ${money(item.price)}
+                </strong>
+
+            </div>
+
+        `).join('')}
+
+    </div>
+
+` : ''}
       ${p.notes?`<br>📝 ${esc(p.notes)}`:''}
       ${p.map?`<br><a class="map-link" href="${esc(p.map)}" target="_blank">↗ Mở bản đồ / link</a>`:''}
     </div>
@@ -91,11 +113,43 @@ function bindDrag(){
   });
 }
 function find(id){return state.places.find(p=>p.id===id)}
-function openPlaceModal(p=null){
-  $('modalTitle').textContent=p?'Chỉnh sửa địa điểm':'Thêm địa điểm'; $('placeId').value=p?.id||'';
-  $('placeName').value=p?.name||''; $('placeCategory').value=p?.category||'Tham quan'; $('placeCost').value=p?.cost||0;
-  $('placeAddress').value=p?.address||''; $('placeNotes').value=p?.notes||''; $('placeMap').value=p?.map||'';
-  $('placeModal').classList.remove('hidden');
+function openPlaceModal(p = null) {
+
+    $('modalTitle').textContent =
+        p ? 'Chỉnh sửa địa điểm' : 'Thêm địa điểm';
+
+    $('placeId').value = p?.id || '';
+
+    $('placeName').value = p?.name || '';
+
+    $('placeCategory').value =
+        p?.category || 'Tham quan';
+
+    $('placeCost').value =
+        p?.cost || 0;
+
+    $('placeAddress').value =
+        p?.address || '';
+
+    $('placeNotes').value =
+        p?.notes || '';
+
+    $('placeMap').value =
+        p?.map || '';
+
+
+    // Load menu của địa điểm
+    currentMenu = p?.menu
+        ? JSON.parse(JSON.stringify(p.menu))
+        : [];
+
+
+    updateMenuVisibility();
+
+    renderMenuItems();
+
+
+    $('placeModal').classList.remove('hidden');
 }
 function closePlaceModal(){$('placeModal').classList.add('hidden')}
 window.editPlace=id=>openPlaceModal(find(id));
@@ -105,10 +159,200 @@ window.deletePlace=id=>{if(confirm('Xóa địa điểm này?')){state.places=st
 
 $('placeForm').addEventListener('submit',e=>{
   e.preventDefault(); const id=$('placeId').value;
-  const data={name:$('placeName').value.trim(),category:$('placeCategory').value,address:$('placeAddress').value.trim(),cost:Number($('placeCost').value||0),notes:$('placeNotes').value.trim(),map:$('placeMap').value.trim()};
-  if(id){Object.assign(find(id),data)}else state.places.push({id:uid(),...data,date:null,time:null});
+const category = $('placeCategory').value;
+
+
+let finalMenu = [];
+
+if (isFoodCategory(category)) {
+
+    finalMenu = currentMenu.filter(item =>
+        item.name.trim() !== ''
+    );
+}
+
+
+let finalCost = Number(
+    $('placeCost').value || 0
+);
+
+
+// Nếu có menu → tổng menu chính là chi phí địa điểm
+
+if (finalMenu.length > 0) {
+
+    finalCost = finalMenu.reduce(
+        (sum, item) =>
+            sum + Number(item.price || 0),
+        0
+    );
+}
+
+
+const data = {
+
+    name: $('placeName').value.trim(),
+
+    category: category,
+
+    address: $('placeAddress').value.trim(),
+
+    cost: finalCost,
+
+    notes: $('placeNotes').value.trim(),
+
+    map: $('placeMap').value.trim(),
+
+    menu: finalMenu
+};  if(id){Object.assign(find(id),data)}else state.places.push({id:uid(),...data,date:null,time:null});
   closePlaceModal();render();toast(id?'Đã cập nhật':'Đã thêm địa điểm');
 });
+function isFoodCategory(category) {
+    return category === 'Ăn uống' || category === 'Cà phê';
+}
+
+
+function updateMenuVisibility() {
+
+    const category = $('placeCategory').value;
+    const menuSection = $('menuSection');
+
+    if (isFoodCategory(category)) {
+        menuSection.classList.remove('hidden');
+    } else {
+        menuSection.classList.add('hidden');
+    }
+}
+
+
+function renderMenuItems() {
+
+    const container = $('menuItems');
+
+    if (currentMenu.length === 0) {
+
+        container.innerHTML = `
+            <div class="menu-empty">
+                Chưa có món nào.
+            </div>
+        `;
+
+    } else {
+
+        container.innerHTML = currentMenu.map((item, index) => `
+
+            <div class="menu-item">
+
+                <input
+                    type="text"
+                    class="menu-name"
+                    placeholder="Tên món"
+                    value="${esc(item.name)}"
+                    oninput="updateMenuName(${index}, this.value)"
+                >
+
+                <div class="menu-price-wrap">
+
+                    <input
+                        type="number"
+                        class="menu-price"
+                        min="0"
+                        placeholder="Giá"
+                        value="${item.price || ''}"
+                        oninput="updateMenuPrice(${index}, this.value)"
+                    >
+
+                    <span>₫</span>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="remove-menu-btn"
+                    onclick="removeMenuItem(${index})">
+                    ×
+                </button>
+
+            </div>
+
+        `).join('');
+    }
+
+    calculateMenuTotal();
+}
+
+
+function addMenuItem() {
+
+    currentMenu.push({
+        name: '',
+        price: 0
+    });
+
+    renderMenuItems();
+}
+
+
+window.removeMenuItem = function(index) {
+
+    currentMenu.splice(index, 1);
+
+    renderMenuItems();
+};
+
+
+window.updateMenuName = function(index, value) {
+
+    currentMenu[index].name = value;
+};
+
+
+window.updateMenuPrice = function(index, value) {
+
+    currentMenu[index].price = Number(value) || 0;
+
+    calculateMenuTotal();
+};
+
+
+function calculateMenuTotal() {
+
+    const total = currentMenu.reduce(
+        (sum, item) => sum + Number(item.price || 0),
+        0
+    );
+
+    $('menuTotal').textContent = money(total);
+
+
+    // Nếu đã nhập menu thì chi phí địa điểm
+    // chính là tổng giá menu
+
+    if (currentMenu.length > 0) {
+
+        $('placeCost').value = total;
+
+        $('placeCost').readOnly = true;
+
+    } else {
+
+        $('placeCost').readOnly = false;
+    }
+}
+
+$('placeCategory').addEventListener('change', function() {
+
+    updateMenuVisibility();
+
+});
+
+$('addMenuItemBtn').addEventListener('click', function() {
+
+    addMenuItem();
+
+});
+
+
 $('addPlaceBtn').onclick=()=>openPlaceModal();
 $('closeModalBtn').onclick=$('cancelModalBtn').onclick=closePlaceModal;
 $('closeTimeBtn').onclick=$('cancelTimeBtn').onclick=()=>{pendingDrop=null;$('timeModal').classList.add('hidden')};

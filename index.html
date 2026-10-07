@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
+
 <body>
   <header class="topbar">
     <div>
@@ -103,14 +105,47 @@
           </label>
           <label>Nội dung
             <select id="placeCategory">
-              <option>Tham quan</option><option>Ăn uống</option><option>Cà phê</option>
-              <option>Check-in</option><option>Di chuyển</option><option>Khách sạn</option>
-              <option>Thuê đồ</option><option>Mua sắm</option><option>Nghỉ ngơi</option><option>Khác</option>
+              <option>Tham quan</option>
+              <option>Ăn uống</option>
+              <option>Cà phê</option>
+              <option>Check-in</option>
+              <option>Di chuyển</option>
+              <option>Khách sạn</option>
+              <option>Thuê đồ</option>
+              <option>Mua sắm</option>
+              <option>Nghỉ ngơi</option>
+              <option>Khác</option>
             </select>
           </label>
           <label>Chi phí (VND)
             <input id="placeCost" type="number" min="0" value="0">
           </label>
+          <div class="menu-section wide hidden" id="menuSection">
+
+            <div class="menu-heading">
+              <div>
+                <span class="mini-label">MENU DỰ ĐỊNH</span>
+                <h3>Món muốn thử</h3>
+              </div>
+
+              <button type="button" class="btn add-menu-btn" id="addMenuItemBtn">
+                ＋ Thêm món
+              </button>
+            </div>
+
+            <p class="menu-hint">
+              Không bắt buộc. Nếu thêm món, chi phí địa điểm sẽ được
+              tính tự động từ tổng giá các món.
+            </p>
+
+            <div id="menuItems"></div>
+
+            <div class="menu-total">
+              <span>Tổng menu</span>
+              <strong id="menuTotal">0 ₫</strong>
+            </div>
+
+          </div>
           <label class="wide">Địa chỉ
             <input id="placeAddress" placeholder="Địa chỉ địa điểm">
           </label>
@@ -148,4 +183,5 @@
   <div class="toast" id="toast"></div>
   <script src="javascript/script.js"></script>
 </body>
+
 </html>
