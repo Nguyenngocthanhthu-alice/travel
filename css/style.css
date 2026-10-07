@@ -4441,3 +4441,8 @@ a.map-link:hover {
 .place-card a {
     cursor: pointer;
 }
+
+#startDate,
+#endDate {
+    width: 250x;
+}
