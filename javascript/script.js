@@ -1579,12 +1579,12 @@ function exportExcel() {
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!merges'] = merges;
 
-    const green = '2C5951';
+    const green = '#ade8de';
     const green2 = '597355';
     const greenLight = 'DCEBE2';
     const pink = 'F2DCE2';
     const pink2 = 'F2BDD0';
-    const pinkDark = 'BF5079';
+    const pinkDark = '#f4cccc';
     const pale = 'FFF7F9';
     const white = 'FFFFFF';
     const ink = '263833';
