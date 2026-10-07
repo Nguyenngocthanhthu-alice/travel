@@ -254,6 +254,15 @@ function toast(msg) {
 ========================================================= */
 
 function getSavedTrips() {
+    // Firebase is the main source once the online connection is ready.
+    // This makes saved trips visible on other devices instead of depending
+    // on each device's separate localStorage.
+    if (firebaseReady) {
+        return Array.isArray(remoteTrips) ? remoteTrips : [];
+    }
+
+    // Local cache is only a fallback while Firebase is still connecting
+    // or when the app is temporarily offline.
     try {
         const trips = JSON.parse(localStorage.getItem(TRIPS_STORAGE_KEY));
         return Array.isArray(trips) ? trips : [];
