@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc,
+  getFirestore, collection, doc, setDoc, deleteDoc, getDoc,
   onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
@@ -73,10 +73,14 @@ function startTripsSync() {
 
 const STORAGE_KEY = 'pinkGreenTripPlannerV1';
 const TRIPS_STORAGE_KEY = 'tripPlannerTrips';
+const PLACE_BANK_STORAGE_KEY = 'tripPlannerPlaceBankV1';
+const PLACE_BANK_DOC_ID = 'global';
 
 let currentTripId = null;
 let pendingDrop = null;
 let currentMenu = [];
+let placeBank = [];
+let placeBankReady = false;
 
 function uid() {
     return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -98,6 +102,14 @@ function esc(s = '') {
         '"': '&quot;',
         "'": '&#039;'
     }[m]));
+}
+
+function todayISO() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 function localDate(iso) {
@@ -125,12 +137,177 @@ function clone(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+function placeTemplate(place = {}) {
+    return {
+        id: place.id || uid(),
+        name: place.name || '',
+        category: place.category || 'Tham quan',
+        address: place.address || '',
+        cost: Math.max(0, Number(place.cost || 0)),
+        notes: place.notes || '',
+        map: place.map || '',
+        menu: Array.isArray(place.menu) ? clone(place.menu) : []
+    };
+}
+
+function loadLocalPlaceBank() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(PLACE_BANK_STORAGE_KEY));
+        placeBank = Array.isArray(raw) ? raw.map(placeTemplate) : [];
+    } catch (error) {
+        console.error('Cannot load Place Bank:', error);
+        placeBank = [];
+    }
+}
+
+function saveLocalPlaceBank() {
+    localStorage.setItem(PLACE_BANK_STORAGE_KEY, JSON.stringify(placeBank));
+}
+
+function mergePlacesIntoBank(places = []) {
+    let changed = false;
+
+    places.forEach(place => {
+        if (!place || !place.id) return;
+
+        const clean = placeTemplate(place);
+        const index = placeBank.findIndex(item => item.id === clean.id);
+
+        if (index === -1) {
+            placeBank.push(clean);
+            changed = true;
+        } else {
+            // Keep the latest details from a trip when migrating old data.
+            const before = JSON.stringify(placeBank[index]);
+            placeBank[index] = { ...placeBank[index], ...clean };
+            if (JSON.stringify(placeBank[index]) !== before) changed = true;
+        }
+    });
+
+    if (changed) saveLocalPlaceBank();
+    return changed;
+}
+
+async function savePlaceBank() {
+    saveLocalPlaceBank();
+
+    try {
+        await ensureFirebaseAuth();
+        await setDoc(
+            doc(db, 'placeBank', PLACE_BANK_DOC_ID),
+            {
+                places: clone(placeBank),
+                updatedAt: serverTimestamp(),
+                lastEditor: auth.currentUser.uid
+            },
+            { merge: true }
+        );
+    } catch (error) {
+        console.error('Place Bank save failed:', error);
+        // Local copy remains available even if Firebase is temporarily unavailable.
+    }
+}
+
+async function loadPlaceBankFromFirebase() {
+    loadLocalPlaceBank();
+
+    try {
+        await ensureFirebaseAuth();
+        const snap = await getDoc(doc(db, 'placeBank', PLACE_BANK_DOC_ID));
+
+        if (snap.exists()) {
+            const data = snap.data() || {};
+            const remote = Array.isArray(data.places) ? data.places.map(placeTemplate) : [];
+
+            // Merge local-only places so upgrading the app does not lose old data.
+            const byId = new Map(remote.map(place => [place.id, place]));
+            placeBank.forEach(place => {
+                if (!byId.has(place.id)) byId.set(place.id, place);
+            });
+            placeBank = Array.from(byId.values());
+        }
+
+        // Migrate places from the currently loaded old-format trip into the shared bank.
+        mergePlacesIntoBank(state?.places || []);
+        placeBankReady = true;
+        await savePlaceBank();
+    } catch (error) {
+        console.error('Place Bank load failed:', error);
+        mergePlacesIntoBank(state?.places || []);
+        placeBankReady = true;
+    }
+}
+
+function scheduleForTrip() {
+    return (state.places || [])
+        .filter(place => place.date)
+        .map(place => ({
+            id: place.id,
+            date: place.date,
+            time: place.time || null
+        }));
+}
+
+function buildTripPlaces(saved) {
+    const schedule = Array.isArray(saved?.schedule)
+        ? saved.schedule
+        : (Array.isArray(saved?.places)
+            ? saved.places.filter(place => place.date).map(place => ({
+                id: place.id,
+                date: place.date,
+                time: place.time || null
+            }))
+            : []);
+
+    const legacyPlaces = Array.isArray(saved?.places) ? saved.places : [];
+
+    return schedule.map(entry => {
+        const bankPlace = placeBank.find(place => place.id === entry.id);
+        const legacyPlace = legacyPlaces.find(place => place.id === entry.id);
+        const source = bankPlace || legacyPlace;
+
+        if (!source) return null;
+
+        return {
+            ...placeTemplate(source),
+            date: entry.date || null,
+            time: entry.time || null
+        };
+    }).filter(Boolean);
+}
+
+function allPlannerPlaces() {
+    const scheduledIds = new Set((state.places || []).filter(p => p.date).map(p => p.id));
+
+    const unscheduled = placeBank
+        .filter(place => !scheduledIds.has(place.id))
+        .map(place => ({
+            ...clone(place),
+            date: null,
+            time: null
+        }));
+
+    const scheduled = (state.places || []).filter(place => place.date);
+    return [...unscheduled, ...scheduled];
+}
+
+function updateBankPlaceFromTrip(place) {
+    if (!place) return;
+    const clean = placeTemplate(place);
+    const index = placeBank.findIndex(item => item.id === clean.id);
+
+    if (index === -1) placeBank.push(clean);
+    else placeBank[index] = clean;
+
+    savePlaceBank();
+}
+
 function defaultState() {
     return {
         trip: {
             name: 'Đà Lạt Trip',
-            start: '2026-04-13',
-            end: '2026-04-16',
+            start: todayISO(),
+            end: todayISO(),
             people: 4,
             budget: 5000000
         },
@@ -303,7 +480,9 @@ async function saveCurrentTrip() {
 
         const payload = {
             trip: clone(state.trip),
-            places: clone(state.places),
+            schedule: scheduleForTrip(),
+            // Keep scheduled snapshots for compatibility with older saved trips.
+            places: clone(state.places.filter(place => place.date)),
             updatedAt: serverTimestamp(),
             lastEditor: auth.currentUser.uid
         };
@@ -336,7 +515,9 @@ function renderSavedTrips() {
 
     container.innerHTML = trips.map(saved => {
         const trip = saved.trip || {};
-        const placeCount = Array.isArray(saved.places) ? saved.places.length : 0;
+        const placeCount = Array.isArray(saved.schedule)
+            ? saved.schedule.length
+            : (Array.isArray(saved.places) ? saved.places.filter(place => place.date).length : 0);
         const days = datesBetween(trip.start, trip.end).length;
 
         return `
@@ -382,9 +563,15 @@ function openSavedTrip(tripId) {
     }
 
     currentTripId = saved.id;
+
+    // Old saved trips may still contain their own place copies.
+    // Merge those into the permanent Place Bank before opening.
+    mergePlacesIntoBank(saved.places || []);
+    savePlaceBank();
+
     state = {
         trip: clone(saved.trip),
-        places: clone(saved.places)
+        places: buildTripPlaces(saved)
     };
     normalizeState();
     save();
@@ -433,8 +620,8 @@ function createNewTrip() {
     state = {
         trip: {
             name: '',
-            start: '',
-            end: '',
+            start: todayISO(),
+            end: todayISO(),
             people: 1,
             budget: 0
         },
@@ -459,6 +646,21 @@ function createNewTrip() {
 ========================================================= */
 
 function syncTripFromInputs() {
+    const today = todayISO();
+
+    if ($('startDate') && $('startDate').value && $('startDate').value < today) {
+        $('startDate').value = today;
+    }
+
+    if ($('endDate')) {
+        const minimumEnd = $('startDate')?.value && $('startDate').value >= today
+            ? $('startDate').value
+            : today;
+        if ($('endDate').value && $('endDate').value < minimumEnd) {
+            $('endDate').value = minimumEnd;
+        }
+    }
+
     if ($('tripName')) state.trip.name = $('tripName').value.trim();
     if ($('startDate')) state.trip.start = $('startDate').value;
     if ($('endDate')) state.trip.end = $('endDate').value;
@@ -519,6 +721,23 @@ function renderBudget() {
     }
 }
 
+function applyDateLimits() {
+    const startInput = $('startDate');
+    const endInput = $('endDate');
+    if (!startInput || !endInput) return;
+
+    const today = todayISO();
+
+    // New selections cannot be in the past.
+    startInput.min = today;
+
+    // End date must be today or later, and never before the selected start date.
+    const startForLimit = startInput.value && startInput.value >= today
+        ? startInput.value
+        : today;
+    endInput.min = startForLimit;
+}
+
 function render() {
     normalizeState();
 
@@ -528,6 +747,8 @@ function render() {
     if ($('startDate')) $('startDate').value = state.trip.start || '';
     if ($('endDate')) $('endDate').value = state.trip.end || '';
     if ($('people')) $('people').value = state.trip.people || 1;
+
+    applyDateLimits();
     if ($('tripBudget')) $('tripBudget').value = Number(state.trip.budget || 0);
 
     if ($('tripBadge')) {
@@ -538,7 +759,10 @@ function render() {
         $('plannerTitle').textContent = state.trip.name || 'Các ngày của chuyến đi';
     }
 
-    const unscheduled = state.places.filter(place => !place.date);
+    const scheduledIds = new Set(state.places.filter(place => place.date).map(place => place.id));
+    const unscheduled = placeBank
+        .filter(place => !scheduledIds.has(place.id))
+        .map(place => ({ ...clone(place), date: null, time: null }));
 
     if ($('unscheduledCount')) $('unscheduledCount').textContent = unscheduled.length;
 
@@ -585,12 +809,12 @@ function render() {
 
     const scheduled = state.places.filter(place => place.date);
 
-    if ($('placeTotal')) $('placeTotal').textContent = state.places.length;
+    if ($('placeTotal')) $('placeTotal').textContent = placeBank.length;
     if ($('scheduledTotal')) $('scheduledTotal').textContent = scheduled.length;
 
     if ($('costTotal')) {
         $('costTotal').textContent = money(
-            state.places.reduce(
+            scheduled.reduce(
                 (sum, place) => sum + Number(place.cost || 0),
                 0
             )
@@ -662,7 +886,8 @@ function placeCard(place) {
 }
 
 function find(id) {
-    return state.places.find(place => place.id === id);
+    return state.places.find(place => place.id === id)
+        || placeBank.find(place => place.id === id);
 }
 
 /* =========================================================
@@ -756,37 +981,36 @@ function duplicatePlace(id) {
     const place = find(id);
     if (!place) return;
 
-    const copy = clone(place);
+    const copy = placeTemplate(place);
     copy.id = uid();
     copy.name = place.name + ' (copy)';
-    copy.date = null;
-    copy.time = null;
 
-    state.places.push(copy);
+    placeBank.push(copy);
+    savePlaceBank();
     render();
-    toast(`Đã tạo bản sao • ${remainingBudgetText()}`);
+    toast('Đã tạo bản sao trong Place Bank');
 }
 
 function unschedulePlace(id) {
     const place = find(id);
     if (!place) return;
 
-    place.date = null;
-    place.time = null;
-
+    state.places = state.places.filter(item => item.id !== id);
     render();
-    toast(`Đã bỏ lịch • ${remainingBudgetText()}`);
+    toast(`Đã bỏ lịch • Địa điểm vẫn còn trong Place Bank • ${remainingBudgetText()}`);
 }
 
 function deletePlaceById(id) {
     const place = find(id);
     if (!place) return;
 
-    if (!confirm(`Xóa địa điểm "${place.name}"?`)) return;
+    if (!confirm(`Xóa vĩnh viễn "${place.name}" khỏi Place Bank? Địa điểm này cũng sẽ bị bỏ khỏi chuyến hiện tại.`)) return;
 
+    placeBank = placeBank.filter(item => item.id !== id);
     state.places = state.places.filter(item => item.id !== id);
+    savePlaceBank();
     render();
-    toast(`Đã xóa địa điểm • ${remainingBudgetText()}`);
+    toast(`Đã xóa vĩnh viễn khỏi Place Bank • ${remainingBudgetText()}`);
 }
 
 /* =========================================================
@@ -927,7 +1151,40 @@ function updateTripFromForm() {
    EVENT LISTENERS
 ========================================================= */
 
+function bindDateLimitEvents() {
+    const startInput = $('startDate');
+    const endInput = $('endDate');
+    if (!startInput || !endInput) return;
+
+    startInput.addEventListener('change', () => {
+        const today = todayISO();
+
+        if (startInput.value && startInput.value < today) {
+            startInput.value = today;
+            toast('Không thể chọn ngày trong quá khứ.');
+        }
+
+        endInput.min = startInput.value || today;
+
+        if (!endInput.value || endInput.value < endInput.min) {
+            endInput.value = endInput.min;
+        }
+    });
+
+    endInput.addEventListener('change', () => {
+        const minimum = startInput.value && startInput.value >= todayISO()
+            ? startInput.value
+            : todayISO();
+
+        if (endInput.value && endInput.value < minimum) {
+            endInput.value = minimum;
+            toast('Ngày kết thúc không thể trước ngày bắt đầu.');
+        }
+    });
+}
+
 function bindStaticEvents() {
+    bindDateLimitEvents();
     $('saveTripBtn')?.addEventListener('click', saveCurrentTrip);
 
     $('myTripsBtn')?.addEventListener('click', () => {
@@ -1050,15 +1307,20 @@ function bindStaticEvents() {
         const oldCost = id ? Number(find(id)?.cost || 0) : 0;
 
         if (id) {
-            const place = find(id);
-            if (place) Object.assign(place, data);
+            const bankPlace = placeBank.find(place => place.id === id);
+            if (bankPlace) Object.assign(bankPlace, data);
+
+            // If this place is scheduled in the current trip, keep its details in sync.
+            const scheduledPlace = state.places.find(place => place.id === id);
+            if (scheduledPlace) Object.assign(scheduledPlace, data);
+
+            savePlaceBank();
         } else {
-            state.places.push({
+            placeBank.push(placeTemplate({
                 id: uid(),
-                ...data,
-                date: null,
-                time: null
-            });
+                ...data
+            }));
+            savePlaceBank();
         }
 
         closePlaceModal();
@@ -1073,7 +1335,7 @@ function bindStaticEvents() {
                     : 'Chi phí không đổi';
             toast(`Đã cập nhật • ${changeText} • ${remainingBudgetText()}`);
         } else {
-            toast(`Đã trừ ${money(finalCost)} • ${remainingBudgetText()}`);
+            toast(`Đã lưu vào Place Bank • Chưa tính vào ngân sách cho đến khi xếp lịch`);
         }
     });
 
@@ -1088,11 +1350,20 @@ function bindStaticEvents() {
     $('confirmTimeBtn')?.addEventListener('click', () => {
         if (!pendingDrop) return;
 
-        const place = find(pendingDrop.id);
+        const source = find(pendingDrop.id);
+        const existing = state.places.find(place => place.id === pendingDrop.id);
 
-        if (place) {
-            place.date = pendingDrop.date;
-            place.time = $('scheduleTime')?.value || '09:00';
+        if (source) {
+            if (existing) {
+                existing.date = pendingDrop.date;
+                existing.time = $('scheduleTime')?.value || '09:00';
+            } else {
+                state.places.push({
+                    ...placeTemplate(source),
+                    date: pendingDrop.date,
+                    time: $('scheduleTime')?.value || '09:00'
+                });
+            }
         }
 
         pendingDrop = null;
@@ -1783,6 +2054,12 @@ async function exportPDF() {
 
 async function init() {
     load();
+    loadLocalPlaceBank();
+
+    // Upgrade old data: places already created in the current trip become permanent.
+    mergePlacesIntoBank(state.places || []);
+    state.places = (state.places || []).filter(place => place.date);
+
     bindStaticEvents();
     $('excelBtn')?.addEventListener('click', exportExcel);
     $('pdfBtn')?.addEventListener('click', exportPDF);
@@ -1790,10 +2067,14 @@ async function init() {
 
     try {
         await ensureFirebaseAuth();
+        await loadPlaceBankFromFirebase();
+        render();
         startTripsSync();
     } catch (error) {
         console.error('Firebase authentication failed:', error);
-        toast('Không kết nối được Firebase. Dữ liệu tạm thời chỉ ở máy này.');
+        placeBankReady = true;
+        render();
+        toast('Không kết nối được Firebase. Place Bank vẫn được giữ trên máy này.');
     }
 }
 
