@@ -21,6 +21,17 @@
     </div>
     <div class="header-actions">
       <button class="btn secondary" id="resetBtn">Tạo chuyến mới</button>
+      <button class="btn secondary" id="myTripsBtn">
+    ♡ Chuyến đi của tôi
+</button>
+
+<button class="btn outline" id="saveTripBtn">
+    Lưu chuyến đi
+</button>
+
+<button class="btn primary" id="newTripBtn">
+    ＋ Chuyến mới
+</button>
       <button class="btn outline" id="excelBtn">Xuất Excel</button>
       <button class="btn primary" id="pdfBtn">Xuất PDF</button>
     </div>
@@ -179,6 +190,47 @@
       </div>
     </div>
   </div>
+
+  <!-- MY TRIPS MODAL -->
+
+<div class="modal hidden" id="tripsModal">
+
+    <div class="modal-panel trips-panel">
+
+        <button
+            type="button"
+            class="modal-close"
+            id="closeTripsModal">
+            ×
+        </button>
+
+        <span class="mini-label">
+            MY TRIPS
+        </span>
+
+        <h2>Chuyến đi của tôi</h2>
+
+        <p class="trips-description">
+            Mở lại chuyến đi đã lưu để xem hoặc tiếp tục chỉnh sửa.
+        </p>
+
+        <div id="savedTripsList" class="saved-trips-list">
+        </div>
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="btn primary"
+                id="createTripFromListBtn">
+                ＋ Tạo chuyến đi mới
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
 
   <div class="toast" id="toast"></div>
   <script src="javascript/script.js"></script>

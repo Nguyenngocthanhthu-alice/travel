@@ -1,4 +1,474 @@
 const STORAGE_KEY = 'pinkGreenTripPlannerV1';
+const TRIPS_STORAGE_KEY = 'tripPlannerTrips';
+let currentTripId = null;
+
+function getSavedTrips() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(TRIPS_STORAGE_KEY)
+        ) || [];
+
+    } catch (error) {
+
+        console.error(
+            'Cannot load saved trips:',
+            error
+        );
+
+        return [];
+    }
+}
+
+function setSavedTrips(trips) {
+
+    localStorage.setItem(
+        TRIPS_STORAGE_KEY,
+        JSON.stringify(trips)
+    );
+}
+
+function createTripId() {
+
+    return (
+        'trip_' +
+        Date.now() +
+        '_' +
+        Math.random()
+            .toString(36)
+            .slice(2, 8)
+    );
+}
+
+function saveCurrentTrip() {
+
+    if (!state.trip.name.trim()) {
+
+        alert('Vui lòng nhập tên chuyến đi.');
+
+        return;
+    }
+
+
+    let trips = getSavedTrips();
+
+
+    /*
+        Nếu chuyến chưa từng được lưu
+        → tạo ID mới
+    */
+
+    if (!currentTripId) {
+
+        currentTripId = createTripId();
+    }
+
+
+    const tripData = {
+
+        id: currentTripId,
+
+        trip: {
+            ...state.trip
+        },
+
+        places: JSON.parse(
+            JSON.stringify(state.places)
+        ),
+
+        updatedAt:
+            new Date().toISOString()
+    };
+
+
+    /*
+        Kiểm tra chuyến này đã tồn tại chưa
+    */
+
+    const existingIndex =
+        trips.findIndex(
+            trip =>
+                trip.id === currentTripId
+        );
+
+
+    if (existingIndex >= 0) {
+
+        /*
+            Update chuyến cũ
+        */
+
+        trips[existingIndex] =
+            tripData;
+
+    } else {
+
+        /*
+            Thêm chuyến mới
+        */
+
+        trips.unshift(
+            tripData
+        );
+    }
+
+
+    setSavedTrips(trips);
+
+
+    /*
+        Vẫn lưu working state hiện tại
+    */
+
+    save();
+
+
+    toast(
+        'Đã lưu chuyến đi ✓'
+    );
+}
+$('savedTripsList').addEventListener('click', function(event) {
+
+    // =========================
+    // OPEN TRIP
+    // =========================
+
+    const openButton =
+        event.target.closest('[data-open-trip]');
+
+    if (openButton) {
+
+        const tripId =
+            openButton.dataset.openTrip;
+
+        openSavedTrip(tripId);
+
+        return;
+    }
+
+
+    // =========================
+    // DELETE TRIP
+    // =========================
+
+    const deleteButton =
+        event.target.closest('[data-delete-trip]');
+
+    if (deleteButton) {
+
+        const tripId =
+            deleteButton.dataset.deleteTrip;
+
+        deleteSavedTrip(tripId);
+
+        return;
+    }
+
+});
+$('saveTripBtn').onclick = function () {
+
+    saveCurrentTrip();
+
+};
+
+function renderSavedTrips() {
+
+    const container = $('savedTripsList');
+    const trips = getSavedTrips();
+
+    if (trips.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty-trips">
+
+                <div class="empty-trips-icon">
+                    ✈
+                </div>
+
+                <strong>
+                    Chưa có chuyến đi nào
+                </strong>
+
+                <p>
+                    Hãy tạo lịch trình đầu tiên của bạn.
+                </p>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = trips.map(saved => {
+
+        const trip = saved.trip;
+
+        const placeCount =
+            saved.places?.length || 0;
+
+        const days =
+            datesBetween(
+                trip.start,
+                trip.end
+            ).length;
+
+
+        return `
+            <div class="saved-trip-card">
+
+                <div class="saved-trip-top">
+
+                    <div>
+
+                        <span class="saved-trip-days">
+                            ${days} NGÀY
+                        </span>
+
+                        <h3>
+                            ${esc(trip.name)}
+                        </h3>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="delete-saved-trip"
+                        data-delete-trip="${saved.id}"
+                        title="Xóa chuyến đi">
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div class="saved-trip-info">
+
+                    <span>
+                        📅 ${localDate(trip.start)}
+                        →
+                        ${localDate(trip.end)}
+                    </span>
+
+                    <span>
+                        👥 ${trip.people || 1} người
+                    </span>
+
+                    <span>
+                        📍 ${placeCount} địa điểm
+                    </span>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="btn open-trip-btn"
+                    data-open-trip="${saved.id}">
+                    Mở chuyến đi →
+                </button>
+
+            </div>
+        `;
+
+    }).join('');
+}
+
+$('myTripsBtn').onclick = function () {
+
+    renderSavedTrips();
+
+    $('tripsModal')
+        .classList
+        .remove('hidden');
+};
+
+$('closeTripsModal').onclick =
+function () {
+
+    $('tripsModal')
+        .classList
+        .add('hidden');
+};
+
+function openSavedTrip(tripId) {
+
+    const trips = getSavedTrips();
+
+    const saved = trips.find(
+        trip => trip.id === tripId
+    );
+
+
+    if (!saved) {
+
+        alert('Không tìm thấy chuyến đi.');
+
+        return;
+    }
+
+
+    // Ghi nhớ chuyến hiện tại
+    currentTripId = saved.id;
+
+
+    // Khôi phục thông tin chuyến đi
+    state.trip = JSON.parse(
+        JSON.stringify(saved.trip)
+    );
+
+
+    // Khôi phục toàn bộ địa điểm
+    state.places = JSON.parse(
+        JSON.stringify(saved.places || [])
+    );
+
+
+    // Đưa dữ liệu trở lại các input
+    $('tripName').value =
+        state.trip.name || '';
+
+    $('startDate').value =
+        state.trip.start || '';
+
+    $('endDate').value =
+        state.trip.end || '';
+
+    $('people').value =
+        state.trip.people || 1;
+
+
+    // Lưu trạng thái đang làm việc
+    save();
+
+
+    // Vẽ lại planner
+    render();
+
+
+    // Đóng cửa sổ My Trips
+    $('tripsModal').classList.add('hidden');
+
+
+    toast('Đã mở chuyến đi ✓');
+}
+
+function deleteSavedTrip(tripId) {
+
+    const trips = getSavedTrips();
+
+    const trip = trips.find(
+        item => item.id === tripId
+    );
+
+
+    if (!trip) {
+        return;
+    }
+
+
+    const confirmed = confirm(
+        `Bạn có chắc muốn xóa chuyến "${trip.trip.name}"?`
+    );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    const newTrips = trips.filter(
+        item => item.id !== tripId
+    );
+
+
+    setSavedTrips(newTrips);
+
+
+    // Nếu đang mở đúng chuyến vừa xóa
+    if (currentTripId === tripId) {
+        currentTripId = null;
+        save();
+    }
+
+
+    renderSavedTrips();
+
+    toast('Đã xóa chuyến đi');
+}
+
+function createNewTrip() {
+
+    const confirmed =
+        confirm(
+            'Tạo chuyến đi mới? Hãy chắc chắn rằng bạn đã lưu chuyến hiện tại nếu muốn giữ lại.'
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    /*
+        Đây là chuyến hoàn toàn mới
+    */
+
+    currentTripId = null;
+
+
+    /*
+        Reset trip
+    */
+
+    state.trip = {
+
+        name: '',
+
+        start: '',
+
+        end: '',
+
+        people: 1
+    };
+
+
+    /*
+        Reset địa điểm
+    */
+
+    state.places = [];
+
+
+    /*
+        Reset form
+    */
+
+    $('tripName').value = '';
+
+    $('startDate').value = '';
+
+    $('endDate').value = '';
+
+    $('people').value = 1;
+
+
+    save();
+
+    render();
+
+
+    $('tripsModal')
+        .classList
+        .add('hidden');
+
+
+    toast(
+        'Đã tạo chuyến đi mới'
+    );
+}
 
 let state = {
   trip: { name:'Đà Lạt Trip', start:'2026-04-13', end:'2026-04-16', people:4 },
@@ -21,9 +491,79 @@ function datesBetween(start,end){
   while(d<=last){ out.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
   return out;
 }
-function save(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); }
-function load(){ try{ const x=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(x?.trip&&Array.isArray(x.places)) state=x; }catch(e){} }
+function save() {
 
+    const workingData = {
+
+        state: state,
+
+        currentTripId:
+            currentTripId
+    };
+
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+            workingData
+        )
+    );
+}
+function load() {
+
+    try {
+
+        const raw =
+            localStorage.getItem(
+                STORAGE_KEY
+            );
+
+
+        if (!raw) {
+            return;
+        }
+
+
+        const data =
+            JSON.parse(raw);
+
+
+        /*
+            Format mới
+        */
+
+        if (data.state) {
+
+            state =
+                data.state;
+
+            currentTripId =
+                data.currentTripId || null;
+
+        }
+
+        /*
+            Tương thích dữ liệu cũ
+        */
+
+        else {
+
+            state =
+                data;
+
+            currentTripId =
+                null;
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            'Cannot load trip:',
+            error
+        );
+    }
+}
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),1800); }
 
 function render(){
