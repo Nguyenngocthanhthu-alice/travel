@@ -4294,3 +4294,138 @@ a.map-link:hover {
         max-width: calc(100vw - 24px);
     }
 }
+
+
+/* =========================================================
+   TRIP BUDGET
+========================================================= */
+
+.setup-grid {
+    grid-template-columns: 1.7fr 1fr 1fr 0.65fr 1fr auto;
+}
+
+.budget-card {
+    margin-top: 20px;
+    padding: 22px 24px;
+}
+
+.budget-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.budget-head h2 {
+    margin: 4px 0 0;
+}
+
+.budget-status {
+    flex-shrink: 0;
+    padding: 8px 13px;
+    border-radius: 999px;
+    background: var(--green-100);
+    color: var(--green-800);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.budget-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.budget-stats > div {
+    padding: 14px 16px;
+    border: 1px solid var(--pink-100);
+    border-radius: 14px;
+    background: var(--pink-50);
+}
+
+.budget-stats span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.budget-stats strong {
+    color: var(--green-800);
+    font-size: 20px;
+}
+
+.budget-progress {
+    height: 10px;
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf2ef;
+}
+
+.budget-progress-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--green-500), var(--green-800));
+    transition: width 0.25s ease;
+}
+
+.budget-note {
+    margin: 9px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.budget-over {
+    border-color: rgba(191, 80, 121, 0.42);
+}
+
+.budget-over .budget-status {
+    background: var(--pink-100);
+    color: var(--pink-500);
+}
+
+.budget-over #budgetRemaining {
+    color: var(--pink-500);
+}
+
+.budget-over .budget-progress-fill {
+    background: var(--pink-500);
+}
+
+@media (max-width: 650px) {
+    .setup-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .budget-card {
+        margin-top: 14px;
+        padding: 17px 15px;
+    }
+
+    .budget-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .budget-status {
+        align-self: flex-start;
+    }
+
+    .budget-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .budget-stats > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .budget-stats strong {
+        font-size: 16px;
+    }
+}

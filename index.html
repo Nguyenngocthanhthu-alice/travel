@@ -60,8 +60,30 @@
         <label>Số người
           <input id="people" type="number" min="1" value="4">
         </label>
+        <label>Ngân sách (VND)
+          <input id="tripBudget" type="number" min="0" step="1000" value="5000000" placeholder="Ví dụ: 5000000">
+        </label>
         <button class="btn primary create-trip" id="createTripBtn">Tạo / cập nhật lịch</button>
       </div>
+    </section>
+
+    <section class="budget-card card" id="budgetCard">
+      <div class="budget-head">
+        <div>
+          <span class="mini-label">TRIP BUDGET</span>
+          <h2>Ngân sách chuyến đi</h2>
+        </div>
+        <span class="budget-status" id="budgetStatus">Chưa nhập ngân sách</span>
+      </div>
+      <div class="budget-stats">
+        <div><span>Ngân sách</span><strong id="budgetTotal">0 ₫</strong></div>
+        <div><span>Đã dự kiến chi</span><strong id="budgetSpent">0 ₫</strong></div>
+        <div><span>Còn lại</span><strong id="budgetRemaining">0 ₫</strong></div>
+      </div>
+      <div class="budget-progress" aria-label="Tiến độ sử dụng ngân sách">
+        <div class="budget-progress-fill" id="budgetProgressFill"></div>
+      </div>
+      <p class="budget-note" id="budgetNote">Chi phí được cập nhật tự động khi thêm, sửa, copy hoặc xóa địa điểm.</p>
     </section>
 
     <section class="planner-shell">

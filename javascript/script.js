@@ -131,7 +131,8 @@ function defaultState() {
             name: 'Đà Lạt Trip',
             start: '2026-04-13',
             end: '2026-04-16',
-            people: 4
+            people: 4,
+            budget: 5000000
         },
         places: [
             {
@@ -224,9 +225,12 @@ function normalizeState() {
             name: '',
             start: '',
             end: '',
-            people: 1
+            people: 1,
+            budget: 0
         };
     }
+
+    state.trip.budget = Math.max(0, Number(state.trip.budget || 0));
 
     if (!Array.isArray(state.places)) state.places = [];
 
@@ -431,7 +435,8 @@ function createNewTrip() {
             name: '',
             start: '',
             end: '',
-            people: 1
+            people: 1,
+            budget: 0
         },
         places: []
     };
@@ -458,6 +463,60 @@ function syncTripFromInputs() {
     if ($('startDate')) state.trip.start = $('startDate').value;
     if ($('endDate')) state.trip.end = $('endDate').value;
     if ($('people')) state.trip.people = Math.max(1, Number($('people').value || 1));
+    if ($('tripBudget')) state.trip.budget = Math.max(0, Number($('tripBudget').value || 0));
+}
+
+function budgetSnapshot() {
+    const budget = Math.max(0, Number(state.trip?.budget || 0));
+    const spent = state.places.reduce(
+        (sum, place) => sum + Math.max(0, Number(place.cost || 0)),
+        0
+    );
+    return { budget, spent, remaining: budget - spent };
+}
+
+function remainingBudgetText() {
+    const { budget, remaining } = budgetSnapshot();
+    if (!budget) return 'Chưa nhập ngân sách';
+    return remaining >= 0
+        ? `Còn lại ${money(remaining)}`
+        : `Vượt ${money(Math.abs(remaining))}`;
+}
+
+function renderBudget() {
+    const { budget, spent, remaining } = budgetSnapshot();
+
+    if ($('budgetTotal')) $('budgetTotal').textContent = money(budget);
+    if ($('budgetSpent')) $('budgetSpent').textContent = money(spent);
+    if ($('budgetRemaining')) $('budgetRemaining').textContent = money(remaining);
+
+    const card = $('budgetCard');
+    const status = $('budgetStatus');
+    const note = $('budgetNote');
+    const fill = $('budgetProgressFill');
+
+    card?.classList.toggle('budget-over', budget > 0 && remaining < 0);
+
+    if (!budget) {
+        if (status) status.textContent = 'Chưa nhập ngân sách';
+        if (note) note.textContent = 'Nhập ngân sách ở phần Thông tin chuyến đi để theo dõi số tiền còn lại.';
+        if (fill) fill.style.width = '0%';
+        return;
+    }
+
+    if (remaining < 0) {
+        if (status) status.textContent = `⚠ Vượt ${money(Math.abs(remaining))}`;
+        if (note) note.textContent = 'Tổng chi phí dự kiến đã vượt ngân sách chuyến đi.';
+    } else {
+        const percentLeft = Math.max(0, Math.round((remaining / budget) * 100));
+        if (status) status.textContent = `${percentLeft}% còn lại`;
+        if (note) note.textContent = `Bạn còn ${money(remaining)} trong ngân sách.`;
+    }
+
+    if (fill) {
+        const usedPercent = Math.min(100, Math.max(0, (spent / budget) * 100));
+        fill.style.width = `${usedPercent}%`;
+    }
 }
 
 function render() {
@@ -469,6 +528,7 @@ function render() {
     if ($('startDate')) $('startDate').value = state.trip.start || '';
     if ($('endDate')) $('endDate').value = state.trip.end || '';
     if ($('people')) $('people').value = state.trip.people || 1;
+    if ($('tripBudget')) $('tripBudget').value = Number(state.trip.budget || 0);
 
     if ($('tripBadge')) {
         $('tripBadge').textContent = `${days.length} ngày • ${state.trip.people || 1} người`;
@@ -537,6 +597,7 @@ function render() {
         );
     }
 
+    renderBudget();
     bindDrag();
     save();
 }
@@ -646,7 +707,7 @@ function bindDrag() {
                 place.date = null;
                 place.time = null;
                 render();
-                toast('Đã đưa về Chưa xếp lịch');
+                toast(`Đã đưa về Chưa xếp lịch • ${remainingBudgetText()}`);
                 return;
             }
 
@@ -703,7 +764,7 @@ function duplicatePlace(id) {
 
     state.places.push(copy);
     render();
-    toast('Đã tạo bản sao');
+    toast(`Đã tạo bản sao • ${remainingBudgetText()}`);
 }
 
 function unschedulePlace(id) {
@@ -714,7 +775,7 @@ function unschedulePlace(id) {
     place.time = null;
 
     render();
-    toast('Đã bỏ lịch');
+    toast(`Đã bỏ lịch • ${remainingBudgetText()}`);
 }
 
 function deletePlaceById(id) {
@@ -725,7 +786,7 @@ function deletePlaceById(id) {
 
     state.places = state.places.filter(item => item.id !== id);
     render();
-    toast('Đã xóa địa điểm');
+    toast(`Đã xóa địa điểm • ${remainingBudgetText()}`);
 }
 
 /* =========================================================
@@ -845,7 +906,8 @@ function updateTripFromForm() {
         name: $('tripName')?.value.trim() || 'My Trip',
         start,
         end,
-        people: Math.max(1, Number($('people')?.value || 1))
+        people: Math.max(1, Number($('people')?.value || 1)),
+        budget: Math.max(0, Number($('tripBudget')?.value || 0))
     };
 
     const validDates = new Set(datesBetween(start, end));
@@ -858,7 +920,7 @@ function updateTripFromForm() {
     });
 
     render();
-    toast('Đã cập nhật chuyến đi');
+    toast(`Đã cập nhật chuyến đi • ${remainingBudgetText()}`);
 }
 
 /* =========================================================
@@ -985,6 +1047,8 @@ function bindStaticEvents() {
             return;
         }
 
+        const oldCost = id ? Number(find(id)?.cost || 0) : 0;
+
         if (id) {
             const place = find(id);
             if (place) Object.assign(place, data);
@@ -999,7 +1063,18 @@ function bindStaticEvents() {
 
         closePlaceModal();
         render();
-        toast(id ? 'Đã cập nhật' : 'Đã thêm địa điểm');
+
+        if (id) {
+            const difference = finalCost - oldCost;
+            const changeText = difference > 0
+                ? `Tăng ${money(difference)}`
+                : difference < 0
+                    ? `Giảm ${money(Math.abs(difference))}`
+                    : 'Chi phí không đổi';
+            toast(`Đã cập nhật • ${changeText} • ${remainingBudgetText()}`);
+        } else {
+            toast(`Đã trừ ${money(finalCost)} • ${remainingBudgetText()}`);
+        }
     });
 
     const cancelTime = () => {
@@ -1024,7 +1099,7 @@ function bindStaticEvents() {
         $('timeModal')?.classList.add('hidden');
 
         render();
-        toast('Đã xếp lịch');
+        toast(`Đã xếp lịch • ${remainingBudgetText()}`);
     });
 
     $('createTripBtn')?.addEventListener('click', updateTripFromForm);
