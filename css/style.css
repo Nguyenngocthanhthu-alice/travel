@@ -1,60 +1,60 @@
-@import url('https\://fonts.googleapis.com/css2?family=Nunito:wght\@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
 
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   COLOUR PALETTE
+   COLOUR PALETTE
 
-\========================================================= \*/
+========================================================= */
 
 
 
 :root {
 
-    --pink-50: #fff7f9;
+    --pink-50: #fff7f9;
 
-    --pink-100: #f2dce2;
+    --pink-100: #f2dce2;
 
-    --pink-200: #f2bdd0;
+    --pink-200: #f2bdd0;
 
-    --pink-500: #bf5079;
-
-
-
-    --green-100: #dcebe2;
-
-    --green-400: #80a682;
-
-    --green-500: #54bf98;
-
-    --green-800: #2c5951;
-
-    --green-muted: #597355;
+    --pink-500: #bf5079;
 
 
 
-    --tan: #d9b596;
+    --green-100: #dcebe2;
+
+    --green-400: #80a682;
+
+    --green-500: #54bf98;
+
+    --green-800: #2c5951;
+
+    --green-muted: #597355;
 
 
 
-    --ink: #263833;
-
-    --muted: #718078;
+    --tan: #d9b596;
 
 
 
-    --white: #ffffff;
+    --ink: #263833;
 
-    --border: #e5e8e5;
+    --muted: #718078;
 
 
 
-    --shadow:
+    --white: #ffffff;
 
-        0 12px 35px rgba(44, 89, 81, 0.10);
+    --border: #e5e8e5;
+
+
+
+    --shadow:
+
+        0 12px 35px rgba(44, 89, 81, 0.10);
 
 }
 
@@ -62,17 +62,17 @@
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   RESET
+   RESET
 
-\========================================================= \*/
+========================================================= */
 
 
 
-\* {
+* {
 
-    box-sizing: border-box;
+    box-sizing: border-box;
 
 }
 
@@ -82,7 +82,7 @@
 
 html {
 
-    scroll-behavior: smooth;
+    scroll-behavior: smooth;
 
 }
 
@@ -92,41 +92,41 @@ html {
 
 body {
 
-    margin: 0;
+    margin: 0;
 
 
 
-    min-height: 100vh;
+    min-height: 100vh;
 
 
 
-    font-family:
+    font-family:
 
-        'Nunito',
+        'Nunito',
 
-        Arial,
+        Arial,
 
-        sans-serif;
-
-
-
-    color: var(--ink);
+        sans-serif;
 
 
 
-    background:
+    color: var(--ink);
 
-        linear-gradient(
 
-            135deg,
 
-            rgba(242, 220, 226, 0.72),
+    background:
 
-            rgba(255, 255, 255, 0.92) 42%,
+        linear-gradient(
 
-            rgba(220, 235, 226, 0.75)
+            135deg,
 
-        );
+            rgba(242, 220, 226, 0.72),
+
+            rgba(255, 255, 255, 0.92) 42%,
+
+            rgba(220, 235, 226, 0.75)
+
+        );
 
 }
 
@@ -142,7 +142,7 @@ select,
 
 textarea {
 
-    font: inherit;
+    font: inherit;
 
 }
 
@@ -152,7 +152,7 @@ textarea {
 
 button {
 
-    cursor: pointer;
+    cursor: pointer;
 
 }
 
@@ -168,7 +168,7 @@ h3,
 
 p {
 
-    margin-top: 0;
+    margin-top: 0;
 
 }
 
@@ -176,55 +176,55 @@ p {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   TOP BAR
+   TOP BAR
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .topbar {
 
-    padding:
+    padding:
 
-        28px
+        28px
 
-        clamp(24px, 5vw, 70px);
-
-
-
-    display: flex;
+        clamp(24px, 5vw, 70px);
 
 
 
-    justify-content: space-between;
-
-    align-items: center;
+    display: flex;
 
 
 
-    gap: 25px;
+    justify-content: space-between;
+
+    align-items: center;
 
 
 
-    background:
-
-        linear-gradient(
-
-            110deg,
-
-            var(--pink-100) 0 48%,
-
-            var(--green-100) 48% 100%
-
-        );
+    gap: 25px;
 
 
 
-    border-bottom:
+    background:
 
-        1px solid rgba(44, 89, 81, 0.10);
+        linear-gradient(
+
+            110deg,
+
+            var(--pink-100) 0 48%,
+
+            var(--green-100) 48% 100%
+
+        );
+
+
+
+    border-bottom:
+
+        1px solid rgba(44, 89, 81, 0.10);
 
 }
 
@@ -234,17 +234,17 @@ p {
 
 .topbar h1 {
 
-    margin-bottom: 3px;
+    margin-bottom: 3px;
 
 
 
-    font-size:
+    font-size:
 
-        clamp(28px, 4vw, 46px);
+        clamp(28px, 4vw, 46px);
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -254,11 +254,11 @@ p {
 
 .subtitle {
 
-    margin: 0;
+    margin: 0;
 
 
 
-    color: #65736c;
+    color: #65736c;
 
 }
 
@@ -270,19 +270,19 @@ p {
 
 .mini-label {
 
-    font-size: 11px;
+    font-size: 11px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    letter-spacing: 0.18em;
+    letter-spacing: 0.18em;
 
 
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 }
 
@@ -292,19 +292,19 @@ p {
 
 .header-actions {
 
-    display: flex;
+    display: flex;
 
 
 
-    gap: 10px;
+    gap: 10px;
 
 
 
-    flex-wrap: wrap;
+    flex-wrap: wrap;
 
 
 
-    justify-content: flex-end;
+    justify-content: flex-end;
 
 }
 
@@ -312,31 +312,31 @@ p {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MAIN
+   MAIN
 
-\========================================================= \*/
+========================================================= */
 
 
 
 main {
 
-    max-width: 1800px;
+    max-width: 1800px;
 
 
 
-    margin: auto;
+    margin: auto;
 
 
 
-    padding:
+    padding:
 
-        28px
+        28px
 
-        clamp(20px, 4vw, 60px)
+        clamp(20px, 4vw, 60px)
 
-        60px;
+        60px;
 
 }
 
@@ -344,33 +344,33 @@ main {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   GENERAL CARD
+   GENERAL CARD
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .card {
 
-    background:
+    background:
 
-        rgba(255, 255, 255, 0.92);
-
-
-
-    border:
-
-        1px solid rgba(89, 115, 85, 0.13);
+        rgba(255, 255, 255, 0.92);
 
 
 
-    border-radius: 22px;
+    border:
+
+        1px solid rgba(89, 115, 85, 0.13);
 
 
 
-    box-shadow: var(--shadow);
+    border-radius: 22px;
+
+
+
+    box-shadow: var(--shadow);
 
 }
 
@@ -378,17 +378,17 @@ main {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   TRIP SETUP
+   TRIP SETUP
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .trip-setup {
 
-    padding: 24px;
+    padding: 24px;
 
 }
 
@@ -402,17 +402,17 @@ main {
 
 .days-toolbar {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
-    align-items: center;
+    align-items: center;
 
 
 
-    gap: 20px;
+    gap: 20px;
 
 }
 
@@ -428,7 +428,7 @@ main {
 
 .summary h2 {
 
-    margin: 4px 0 0;
+    margin: 4px 0 0;
 
 }
 
@@ -438,23 +438,23 @@ main {
 
 .trip-badge {
 
-    padding: 8px 13px;
+    padding: 8px 13px;
 
 
 
-    border-radius: 999px;
+    border-radius: 999px;
 
 
 
-    background: var(--green-100);
+    background: var(--green-100);
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-weight: 800;
+    font-weight: 800;
 
 }
 
@@ -464,33 +464,33 @@ main {
 
 .setup-grid {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        2fr
+        2fr
 
-        1.15fr
+        1.15fr
 
-        1.15fr
+        1.15fr
 
-        0.7fr
+        0.7fr
 
-        auto;
-
-
-
-    gap: 14px;
+        auto;
 
 
 
-    align-items: end;
+    gap: 14px;
 
 
 
-    margin-top: 22px;
+    align-items: end;
+
+
+
+    margin-top: 22px;
 
 }
 
@@ -498,33 +498,33 @@ main {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   FORM ELEMENTS
+   FORM ELEMENTS
 
-\========================================================= \*/
+========================================================= */
 
 
 
 label {
 
-    display: flex;
+    display: flex;
 
 
 
-    flex-direction: column;
+    flex-direction: column;
 
 
 
-    gap: 7px;
+    gap: 7px;
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 
 
-    font-weight: 800;
+    font-weight: 800;
 
 }
 
@@ -538,37 +538,37 @@ select,
 
 textarea {
 
-    width: 100%;
+    width: 100%;
 
 
 
-    padding: 11px 12px;
+    padding: 11px 12px;
 
 
 
-    border:
+    border:
 
-        1px solid #dce3de;
-
-
-
-    border-radius: 12px;
+        1px solid #dce3de;
 
 
 
-    outline: none;
+    border-radius: 12px;
 
 
 
-    background: #ffffff;
+    outline: none;
 
 
 
-    color: var(--ink);
+    background: #ffffff;
 
 
 
-    transition: 0.18s;
+    color: var(--ink);
+
+
+
+    transition: 0.18s;
 
 }
 
@@ -578,7 +578,7 @@ textarea {
 
 textarea {
 
-    resize: vertical;
+    resize: vertical;
 
 }
 
@@ -592,15 +592,15 @@ select:focus,
 
 textarea:focus {
 
-    border-color: var(--green-500);
+    border-color: var(--green-500);
 
 
 
-    box-shadow:
+    box-shadow:
 
-        0 0 0 3px
+        0 0 0 3px
 
-        rgba(84, 191, 152, 0.13);
+        rgba(84, 191, 152, 0.13);
 
 }
 
@@ -608,33 +608,33 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   BUTTONS
+   BUTTONS
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .btn {
 
-    padding: 11px 16px;
+    padding: 11px 16px;
 
 
 
-    border: 0;
+    border: 0;
 
 
 
-    border-radius: 12px;
+    border-radius: 12px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    transition: 0.18s;
+    transition: 0.18s;
 
 }
 
@@ -644,7 +644,7 @@ textarea:focus {
 
 .btn:hover {
 
-    transform: translateY(-1px);
+    transform: translateY(-1px);
 
 }
 
@@ -654,11 +654,11 @@ textarea:focus {
 
 .primary {
 
-    background: var(--green-800);
+    background: var(--green-800);
 
 
 
-    color: #ffffff;
+    color: #ffffff;
 
 }
 
@@ -668,11 +668,11 @@ textarea:focus {
 
 .secondary {
 
-    background: var(--pink-100);
+    background: var(--pink-100);
 
 
 
-    color: #784459;
+    color: #784459;
 
 }
 
@@ -682,17 +682,17 @@ textarea:focus {
 
 .outline {
 
-    background: #ffffff;
+    background: #ffffff;
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    border:
+    border:
 
-        1px solid var(--green-400);
+        1px solid var(--green-400);
 
 }
 
@@ -702,7 +702,7 @@ textarea:focus {
 
 .create-trip {
 
-    height: 43px;
+    height: 43px;
 
 }
 
@@ -710,37 +710,37 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   PLANNER LAYOUT
+   PLANNER LAYOUT
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .planner-shell {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        285px
+        285px
 
-        minmax(0, 1fr);
-
-
-
-    gap: 18px;
+        minmax(0, 1fr);
 
 
 
-    align-items: start;
+    gap: 18px;
 
 
 
-    margin-top: 20px;
+    align-items: start;
+
+
+
+    margin-top: 20px;
 
 }
 
@@ -748,33 +748,33 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   UNSCHEDULED PLACES
+   UNSCHEDULED PLACES
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .unscheduled {
 
-    position: sticky;
+    position: sticky;
 
 
 
-    top: 16px;
+    top: 16px;
 
 
 
-    z-index: 2;
+    z-index: 2;
 
 
 
-    min-height: 540px;
+    min-height: 540px;
 
 
 
-    padding: 20px;
+    padding: 20px;
 
 }
 
@@ -784,35 +784,35 @@ textarea:focus {
 
 .count {
 
-    min-width: 30px;
+    min-width: 30px;
 
 
 
-    height: 30px;
+    height: 30px;
 
 
 
-    display: grid;
+    display: grid;
 
 
 
-    place-items: center;
+    place-items: center;
 
 
 
-    border-radius: 50%;
+    border-radius: 50%;
 
 
 
-    background: var(--pink-500);
+    background: var(--pink-500);
 
 
 
-    color: #ffffff;
+    color: #ffffff;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 }
 
@@ -822,19 +822,19 @@ textarea:focus {
 
 .add-place {
 
-    width: 100%;
+    width: 100%;
 
 
 
-    margin: 18px 0 8px;
+    margin: 18px 0 8px;
 
 
 
-    background: var(--pink-500);
+    background: var(--pink-500);
 
 
 
-    color: #ffffff;
+    color: #ffffff;
 
 }
 
@@ -844,15 +844,15 @@ textarea:focus {
 
 .hint {
 
-    font-size: 12px;
+    font-size: 12px;
 
 
 
-    line-height: 1.45;
+    line-height: 1.45;
 
 
 
-    color: var(--muted);
+    color: var(--muted);
 
 }
 
@@ -862,25 +862,25 @@ textarea:focus {
 
 .drop-list {
 
-    min-height: 385px;
+    min-height: 385px;
 
 
 
-    padding: 5px;
+    padding: 5px;
 
 
 
-    border:
+    border:
 
-        2px dashed transparent;
-
-
-
-    border-radius: 16px;
+        2px dashed transparent;
 
 
 
-    transition: 0.2s;
+    border-radius: 16px;
+
+
+
+    transition: 0.2s;
 
 }
 
@@ -892,11 +892,11 @@ textarea:focus {
 
 .day-drop.drag-over {
 
-    border-color: var(--green-500);
+    border-color: var(--green-500);
 
 
 
-    background: #eef9f4;
+    background: #eef9f4;
 
 }
 
@@ -904,17 +904,17 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   DAYS
+   DAYS
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .days-area {
 
-    min-width: 0;
+    min-width: 0;
 
 }
 
@@ -924,7 +924,7 @@ textarea:focus {
 
 .days-toolbar {
 
-    padding: 7px 5px 14px;
+    padding: 7px 5px 14px;
 
 }
 
@@ -934,15 +934,15 @@ textarea:focus {
 
 .days-toolbar p {
 
-    margin: 0;
+    margin: 0;
 
 
 
-    color: var(--muted);
+    color: var(--muted);
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 }
 
@@ -952,35 +952,35 @@ textarea:focus {
 
 .days-scroll {
 
-    display: flex;
+    display: flex;
 
 
 
-    gap: 16px;
+    gap: 16px;
 
 
 
-    overflow-x: auto;
+    overflow-x: auto;
 
 
 
-    padding: 0 3px 18px;
+    padding: 0 3px 18px;
 
 
 
-    scroll-snap-type: x proximity;
+    scroll-snap-type: x proximity;
 
 
 
-    scrollbar-width: thin;
+    scrollbar-width: thin;
 
 
 
-    scrollbar-color:
+    scrollbar-color:
 
-        var(--pink-200)
+        var(--pink-200)
 
-        transparent;
+        transparent;
 
 }
 
@@ -990,7 +990,7 @@ textarea:focus {
 
 .days-scroll::-webkit-scrollbar {
 
-    height: 8px;
+    height: 8px;
 
 }
 
@@ -1000,7 +1000,7 @@ textarea:focus {
 
 .days-scroll::-webkit-scrollbar-track {
 
-    background: transparent;
+    background: transparent;
 
 }
 
@@ -1010,11 +1010,11 @@ textarea:focus {
 
 .days-scroll::-webkit-scrollbar-thumb {
 
-    background: var(--pink-200);
+    background: var(--pink-200);
 
 
 
-    border-radius: 20px;
+    border-radius: 20px;
 
 }
 
@@ -1024,7 +1024,7 @@ textarea:focus {
 
 .days-scroll::-webkit-scrollbar-thumb:hover {
 
-    background: var(--pink-500);
+    background: var(--pink-500);
 
 }
 
@@ -1034,37 +1034,37 @@ textarea:focus {
 
 .day-column {
 
-    flex:
+    flex:
 
-        0 0 330px;
-
-
-
-    overflow: hidden;
+        0 0 330px;
 
 
 
-    scroll-snap-align: start;
+    overflow: hidden;
 
 
 
-    background:
-
-        rgba(255, 255, 255, 0.94);
+    scroll-snap-align: start;
 
 
 
-    border:
+    background:
 
-        1px solid rgba(44, 89, 81, 0.13);
-
-
-
-    border-radius: 22px;
+        rgba(255, 255, 255, 0.94);
 
 
 
-    box-shadow: var(--shadow);
+    border:
+
+        1px solid rgba(44, 89, 81, 0.13);
+
+
+
+    border-radius: 22px;
+
+
+
+    box-shadow: var(--shadow);
 
 }
 
@@ -1074,25 +1074,25 @@ textarea:focus {
 
 .day-head {
 
-    padding: 17px 18px;
+    padding: 17px 18px;
 
 
 
-    background:
+    background:
 
-        linear-gradient(
+        linear-gradient(
 
-            135deg,
+            135deg,
 
-            var(--green-800),
+            var(--green-800),
 
-            var(--green-muted)
+            var(--green-muted)
 
-        );
+        );
 
 
 
-    color: #ffffff;
+    color: #ffffff;
 
 }
 
@@ -1102,19 +1102,19 @@ textarea:focus {
 
 .day-head .day-no {
 
-    font-size: 12px;
+    font-size: 12px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    letter-spacing: 0.16em;
+    letter-spacing: 0.16em;
 
 
 
-    opacity: 0.75;
+    opacity: 0.75;
 
 }
 
@@ -1124,11 +1124,11 @@ textarea:focus {
 
 .day-head h3 {
 
-    margin: 4px 0 0;
+    margin: 4px 0 0;
 
 
 
-    font-size: 21px;
+    font-size: 21px;
 
 }
 
@@ -1138,25 +1138,25 @@ textarea:focus {
 
 .day-drop {
 
-    min-height: 470px;
+    min-height: 470px;
 
 
 
-    margin: 8px;
+    margin: 8px;
 
 
 
-    padding: 13px;
+    padding: 13px;
 
 
 
-    border:
+    border:
 
-        2px dashed transparent;
+        2px dashed transparent;
 
 
 
-    border-radius: 16px;
+    border-radius: 16px;
 
 }
 
@@ -1166,19 +1166,19 @@ textarea:focus {
 
 .empty-day {
 
-    padding: 65px 20px;
+    padding: 65px 20px;
 
 
 
-    text-align: center;
+    text-align: center;
 
 
 
-    color: #9ba69f;
+    color: #9ba69f;
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 }
 
@@ -1186,53 +1186,53 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   PLACE CARD
+   PLACE CARD
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .place-card {
 
-    margin-bottom: 10px;
+    margin-bottom: 10px;
 
 
 
-    padding: 12px;
+    padding: 12px;
 
 
 
-    background: #ffffff;
+    background: #ffffff;
 
 
 
-    border:
+    border:
 
-        1px solid #e7e9e7;
-
-
-
-    border-left:
-
-        5px solid var(--pink-500);
+        1px solid #e7e9e7;
 
 
 
-    border-radius: 15px;
+    border-left:
+
+        5px solid var(--pink-500);
 
 
 
-    box-shadow:
-
-        0 6px 18px
-
-        rgba(44, 89, 81, 0.07);
+    border-radius: 15px;
 
 
 
-    cursor: grab;
+    box-shadow:
+
+        0 6px 18px
+
+        rgba(44, 89, 81, 0.07);
+
+
+
+    cursor: grab;
 
 }
 
@@ -1242,7 +1242,7 @@ textarea:focus {
 
 .place-card:active {
 
-    cursor: grabbing;
+    cursor: grabbing;
 
 }
 
@@ -1252,7 +1252,7 @@ textarea:focus {
 
 .place-card.dragging {
 
-    opacity: 0.45;
+    opacity: 0.45;
 
 }
 
@@ -1262,15 +1262,15 @@ textarea:focus {
 
 .place-top {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    gap: 10px;
+    gap: 10px;
 
 }
 
@@ -1280,11 +1280,11 @@ textarea:focus {
 
 .place-name {
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    line-height: 1.2;
+    line-height: 1.2;
 
 }
 
@@ -1294,19 +1294,19 @@ textarea:focus {
 
 .category {
 
-    margin-top: 4px;
+    margin-top: 4px;
 
 
 
-    font-size: 11px;
+    font-size: 11px;
 
 
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 }
 
@@ -1316,19 +1316,19 @@ textarea:focus {
 
 .place-meta {
 
-    margin-top: 8px;
+    margin-top: 8px;
 
 
 
-    font-size: 12px;
+    font-size: 12px;
 
 
 
-    line-height: 1.45;
+    line-height: 1.45;
 
 
 
-    color: #68776f;
+    color: #68776f;
 
 }
 
@@ -1338,11 +1338,11 @@ textarea:focus {
 
 .cost {
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -1352,19 +1352,19 @@ textarea:focus {
 
 .card-actions {
 
-    display: flex;
+    display: flex;
 
 
 
-    flex-wrap: wrap;
+    flex-wrap: wrap;
 
 
 
-    gap: 6px;
+    gap: 6px;
 
 
 
-    margin-top: 10px;
+    margin-top: 10px;
 
 }
 
@@ -1374,31 +1374,31 @@ textarea:focus {
 
 .mini-btn {
 
-    padding: 5px 8px;
+    padding: 5px 8px;
 
 
 
-    border: 0;
+    border: 0;
 
 
 
-    border-radius: 8px;
+    border-radius: 8px;
 
 
 
-    background: #f5f6f5;
+    background: #f5f6f5;
 
 
 
-    color: #65736c;
+    color: #65736c;
 
 
 
-    font-size: 11px;
+    font-size: 11px;
 
 
 
-    font-weight: 800;
+    font-weight: 800;
 
 }
 
@@ -1408,7 +1408,7 @@ textarea:focus {
 
 .mini-btn:hover {
 
-    background: var(--pink-100);
+    background: var(--pink-100);
 
 }
 
@@ -1418,31 +1418,31 @@ textarea:focus {
 
 .time-chip {
 
-    padding: 4px 8px;
+    padding: 4px 8px;
 
 
 
-    border-radius: 8px;
+    border-radius: 8px;
 
 
 
-    background: var(--green-100);
+    background: var(--green-100);
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-size: 12px;
+    font-size: 12px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    white-space: nowrap;
+    white-space: nowrap;
 
 }
 
@@ -1452,29 +1452,29 @@ textarea:focus {
 
 .day-total {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    padding: 12px 18px;
+    padding: 12px 18px;
 
 
 
-    background: #f7faf8;
+    background: #f7faf8;
 
 
 
-    border-top:
+    border-top:
 
-        1px solid #e9eeeb;
+        1px solid #e9eeeb;
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 }
 
@@ -1484,7 +1484,7 @@ textarea:focus {
 
 .day-total strong {
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -1492,37 +1492,37 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   SUMMARY
+   SUMMARY
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .summary {
 
-    display: flex;
+    display: flex;
 
 
 
-    align-items: center;
+    align-items: center;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    gap: 25px;
+    gap: 25px;
 
 
 
-    margin-top: 20px;
+    margin-top: 20px;
 
 
 
-    padding: 22px;
+    padding: 22px;
 
 }
 
@@ -1532,15 +1532,15 @@ textarea:focus {
 
 .summary-stats {
 
-    display: flex;
+    display: flex;
 
 
 
-    flex-wrap: wrap;
+    flex-wrap: wrap;
 
 
 
-    gap: 12px;
+    gap: 12px;
 
 }
 
@@ -1550,25 +1550,25 @@ textarea:focus {
 
 .summary-stats div {
 
-    min-width: 130px;
+    min-width: 130px;
 
 
 
-    padding: 12px 20px;
+    padding: 12px 20px;
 
 
 
-    background: var(--pink-50);
+    background: var(--pink-50);
 
 
 
-    border:
+    border:
 
-        1px solid var(--pink-100);
+        1px solid var(--pink-100);
 
 
 
-    border-radius: 14px;
+    border-radius: 14px;
 
 }
 
@@ -1578,19 +1578,19 @@ textarea:focus {
 
 .summary-stats span {
 
-    display: block;
+    display: block;
 
 
 
-    font-size: 11px;
+    font-size: 11px;
 
 
 
-    color: var(--muted);
+    color: var(--muted);
 
 
 
-    font-weight: 800;
+    font-weight: 800;
 
 }
 
@@ -1600,11 +1600,11 @@ textarea:focus {
 
 .summary-stats strong {
 
-    font-size: 19px;
+    font-size: 19px;
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -1612,55 +1612,55 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MODAL BACKGROUND
+   MODAL BACKGROUND
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .modal {
 
-    position: fixed;
+    position: fixed;
 
 
 
-    inset: 0;
+    inset: 0;
 
 
 
-    z-index: 20;
+    z-index: 20;
 
 
 
-    display: grid;
+    display: grid;
 
 
 
-    place-items: center;
+    place-items: center;
 
 
 
-    padding: 30px 20px;
+    padding: 30px 20px;
 
 
 
-    background:
+    background:
 
-        rgba(29, 45, 40, 0.45);
+        rgba(29, 45, 40, 0.45);
 
 
 
-    /\*
+    /*
 
-        Không scroll toàn bộ background.
+        Không scroll toàn bộ background.
 
-        Chỉ modal-panel bên trong được scroll.
+        Chỉ modal-panel bên trong được scroll.
 
-    \*/
+    */
 
-    overflow: hidden;
+    overflow: hidden;
 
 }
 
@@ -1670,7 +1670,7 @@ textarea:focus {
 
 .hidden {
 
-    display: none !important;
+    display: none !important;
 
 }
 
@@ -1678,83 +1678,83 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MODAL PANEL
+   MODAL PANEL
 
-   FIX: MODAL CAN NOW SCROLL
+   FIX: MODAL CAN NOW SCROLL
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .modal-panel {
 
-    position: relative;
+    position: relative;
 
 
 
-    width:
+    width:
 
-        min(650px, 96vw);
-
-
-
-    /\*
-
-        Modal không bao giờ cao hơn màn hình.
-
-    \*/
-
-    max-height:
-
-        calc(100vh - 60px);
+        min(650px, 96vw);
 
 
 
-    padding: 27px;
+    /*
+
+        Modal không bao giờ cao hơn màn hình.
+
+    */
+
+    max-height:
+
+        calc(100vh - 60px);
 
 
 
-    overflow-y: auto;
+    padding: 27px;
 
 
 
-    overflow-x: hidden;
+    overflow-y: auto;
 
 
 
-    background: #ffffff;
+    overflow-x: hidden;
 
 
 
-    border-radius: 24px;
+    background: #ffffff;
 
 
 
-    box-shadow:
-
-        0 30px 90px
-
-        rgba(0, 0, 0, 0.22);
+    border-radius: 24px;
 
 
 
-    /\*
+    box-shadow:
 
-        Firefox scrollbar
+        0 30px 90px
 
-    \*/
-
-    scrollbar-width: thin;
+        rgba(0, 0, 0, 0.22);
 
 
 
-    scrollbar-color:
+    /*
 
-        var(--pink-200)
+        Firefox scrollbar
 
-        transparent;
+    */
+
+    scrollbar-width: thin;
+
+
+
+    scrollbar-color:
+
+        var(--pink-200)
+
+        transparent;
 
 }
 
@@ -1762,13 +1762,13 @@ textarea:focus {
 
 
 
-/\* Chrome / Edge scrollbar \*/
+/* Chrome / Edge scrollbar */
 
 
 
 .modal-panel::-webkit-scrollbar {
 
-    width: 7px;
+    width: 7px;
 
 }
 
@@ -1778,7 +1778,7 @@ textarea:focus {
 
 .modal-panel::-webkit-scrollbar-track {
 
-    background: transparent;
+    background: transparent;
 
 }
 
@@ -1788,11 +1788,11 @@ textarea:focus {
 
 .modal-panel::-webkit-scrollbar-thumb {
 
-    background: var(--pink-200);
+    background: var(--pink-200);
 
 
 
-    border-radius: 20px;
+    border-radius: 20px;
 
 }
 
@@ -1802,7 +1802,7 @@ textarea:focus {
 
 .modal-panel::-webkit-scrollbar-thumb:hover {
 
-    background: var(--pink-500);
+    background: var(--pink-500);
 
 }
 
@@ -1810,53 +1810,53 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MODAL HEADER / CLOSE
+   MODAL HEADER / CLOSE
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .modal-close {
 
-    position: absolute;
+    position: absolute;
 
 
 
-    top: 14px;
+    top: 14px;
 
 
 
-    right: 17px;
+    right: 17px;
 
 
 
-    z-index: 5;
+    z-index: 5;
 
 
 
-    border: 0;
+    border: 0;
 
 
 
-    background: none;
+    background: none;
 
 
 
-    color: #7d8982;
+    color: #7d8982;
 
 
 
-    font-size: 28px;
+    font-size: 28px;
 
 
 
-    line-height: 1;
+    line-height: 1;
 
 
 
-    transition: 0.15s;
+    transition: 0.15s;
 
 }
 
@@ -1866,11 +1866,11 @@ textarea:focus {
 
 .modal-close:hover {
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 
 
-    transform: scale(1.08);
+    transform: scale(1.08);
 
 }
 
@@ -1878,29 +1878,29 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MODAL FORM
+   MODAL FORM
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .form-grid {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        1fr
+        1fr
 
-        1fr;
+        1fr;
 
 
 
-    gap: 14px;
+    gap: 14px;
 
 }
 
@@ -1910,9 +1910,9 @@ textarea:focus {
 
 .wide {
 
-    grid-column:
+    grid-column:
 
-        1 / -1;
+        1 / -1;
 
 }
 
@@ -1922,29 +1922,29 @@ textarea:focus {
 
 .modal-actions {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: flex-end;
+    justify-content: flex-end;
 
 
 
-    gap: 10px;
+    gap: 10px;
 
 
 
-    margin-top: 20px;
+    margin-top: 20px;
 
 
 
-    padding-top: 15px;
+    padding-top: 15px;
 
 
 
-    border-top:
+    border-top:
 
-        1px solid #eef0ee;
+        1px solid #eef0ee;
 
 }
 
@@ -1954,9 +1954,9 @@ textarea:focus {
 
 .time-panel {
 
-    width:
+    width:
 
-        min(420px, 96vw);
+        min(420px, 96vw);
 
 }
 
@@ -1966,11 +1966,11 @@ textarea:focus {
 
 .time-place {
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 }
 
@@ -1978,35 +1978,35 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   FOOD / CAFE MENU
+   FOOD / CAFE MENU
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .menu-section {
 
-    margin-top: 5px;
+    margin-top: 5px;
 
 
 
-    padding: 18px;
+    padding: 18px;
 
 
 
-    border:
+    border:
 
-        1px solid var(--pink-100);
-
-
-
-    border-radius: 16px;
+        1px solid var(--pink-100);
 
 
 
-    background: var(--pink-50);
+    border-radius: 16px;
+
+
+
+    background: var(--pink-50);
 
 }
 
@@ -2016,19 +2016,19 @@ textarea:focus {
 
 .menu-heading {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    align-items: center;
+    align-items: center;
 
 
 
-    gap: 15px;
+    gap: 15px;
 
 }
 
@@ -2038,13 +2038,13 @@ textarea:focus {
 
 .menu-heading h3 {
 
-    margin:
+    margin:
 
-        3px 0 0;
+        3px 0 0;
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -2054,21 +2054,21 @@ textarea:focus {
 
 .menu-hint {
 
-    margin:
+    margin:
 
-        8px 0 15px;
-
-
-
-    color: var(--muted);
+        8px 0 15px;
 
 
 
-    font-size: 12px;
+    color: var(--muted);
 
 
 
-    line-height: 1.5;
+    font-size: 12px;
+
+
+
+    line-height: 1.5;
 
 }
 
@@ -2078,19 +2078,19 @@ textarea:focus {
 
 .add-menu-btn {
 
-    flex-shrink: 0;
+    flex-shrink: 0;
 
 
 
-    padding: 8px 12px;
+    padding: 8px 12px;
 
 
 
-    background: var(--pink-100);
+    background: var(--pink-100);
 
 
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 }
 
@@ -2100,7 +2100,7 @@ textarea:focus {
 
 .add-menu-btn:hover {
 
-    background: var(--pink-200);
+    background: var(--pink-200);
 
 }
 
@@ -2108,39 +2108,39 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MENU ITEM
+   MENU ITEM
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .menu-item {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        minmax(0, 1fr)
+        minmax(0, 1fr)
 
-        150px
+        150px
 
-        35px;
-
-
-
-    gap: 8px;
+        35px;
 
 
 
-    align-items: center;
+    gap: 8px;
 
 
 
-    margin-bottom: 8px;
+    align-items: center;
+
+
+
+    margin-bottom: 8px;
 
 }
 
@@ -2150,7 +2150,7 @@ textarea:focus {
 
 .menu-price-wrap {
 
-    position: relative;
+    position: relative;
 
 }
 
@@ -2160,7 +2160,7 @@ textarea:focus {
 
 .menu-price-wrap input {
 
-    padding-right: 30px;
+    padding-right: 30px;
 
 }
 
@@ -2170,33 +2170,33 @@ textarea:focus {
 
 .menu-price-wrap span {
 
-    position: absolute;
+    position: absolute;
 
 
 
-    top: 50%;
+    top: 50%;
 
 
 
-    right: 11px;
+    right: 11px;
 
 
 
-    transform:
+    transform:
 
-        translateY(-50%);
-
-
-
-    color: var(--green-muted);
+        translateY(-50%);
 
 
 
-    font-weight: 800;
+    color: var(--green-muted);
 
 
 
-    pointer-events: none;
+    font-weight: 800;
+
+
+
+    pointer-events: none;
 
 }
 
@@ -2206,43 +2206,43 @@ textarea:focus {
 
 .remove-menu-btn {
 
-    width: 34px;
+    width: 34px;
 
 
 
-    height: 34px;
+    height: 34px;
 
 
 
-    padding: 0;
+    padding: 0;
 
 
 
-    border: 0;
+    border: 0;
 
 
 
-    border-radius: 9px;
+    border-radius: 9px;
 
 
 
-    background: var(--pink-100);
+    background: var(--pink-100);
 
 
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 
 
-    font-size: 20px;
+    font-size: 20px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    transition: 0.15s;
+    transition: 0.15s;
 
 }
 
@@ -2252,7 +2252,7 @@ textarea:focus {
 
 .remove-menu-btn:hover {
 
-    background: var(--pink-200);
+    background: var(--pink-200);
 
 }
 
@@ -2262,29 +2262,29 @@ textarea:focus {
 
 .menu-empty {
 
-    padding: 14px;
+    padding: 14px;
 
 
 
-    border:
+    border:
 
-        1px dashed var(--tan);
-
-
-
-    border-radius: 12px;
+        1px dashed var(--tan);
 
 
 
-    color: #8a958f;
+    border-radius: 12px;
 
 
 
-    font-size: 12px;
+    color: #8a958f;
 
 
 
-    text-align: center;
+    font-size: 12px;
+
+
+
+    text-align: center;
 
 }
 
@@ -2292,43 +2292,43 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MENU TOTAL
+   MENU TOTAL
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .menu-total {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    align-items: center;
+    align-items: center;
 
 
 
-    margin-top: 14px;
+    margin-top: 14px;
 
 
 
-    padding-top: 13px;
+    padding-top: 13px;
 
 
 
-    border-top:
+    border-top:
 
-        2px solid var(--pink-100);
+        2px solid var(--pink-100);
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 }
 
@@ -2338,7 +2338,7 @@ textarea:focus {
 
 .menu-total strong {
 
-    font-size: 18px;
+    font-size: 18px;
 
 }
 
@@ -2346,21 +2346,21 @@ textarea:focus {
 
 
 
-\#placeCost[readonly] {
+#placeCost[readonly] {
 
-    background: #edf5f0;
-
-
-
-    color: var(--green-800);
+    background: #edf5f0;
 
 
 
-    font-weight: 900;
+    color: var(--green-800);
 
 
 
-    cursor: not-allowed;
+    font-weight: 900;
+
+
+
+    cursor: not-allowed;
 
 }
 
@@ -2368,35 +2368,35 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MENU INSIDE PLACE CARD
+   MENU INSIDE PLACE CARD
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .card-menu {
 
-    margin-top: 9px;
+    margin-top: 9px;
 
 
 
-    padding: 9px 10px;
+    padding: 9px 10px;
 
 
 
-    background: var(--pink-50);
+    background: var(--pink-50);
 
 
 
-    border:
+    border:
 
-        1px solid var(--pink-100);
+        1px solid var(--pink-100);
 
 
 
-    border-radius: 10px;
+    border-radius: 10px;
 
 }
 
@@ -2406,27 +2406,27 @@ textarea:focus {
 
 .card-menu-item {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    align-items: flex-start;
+    align-items: flex-start;
 
 
 
-    gap: 10px;
+    gap: 10px;
 
 
 
-    margin: 3px 0;
+    margin: 3px 0;
 
 
 
-    font-size: 11px;
+    font-size: 11px;
 
 }
 
@@ -2436,11 +2436,11 @@ textarea:focus {
 
 .card-menu-item span {
 
-    min-width: 0;
+    min-width: 0;
 
 
 
-    overflow-wrap: anywhere;
+    overflow-wrap: anywhere;
 
 }
 
@@ -2450,15 +2450,15 @@ textarea:focus {
 
 .card-menu-item strong {
 
-    flex-shrink: 0;
+    flex-shrink: 0;
 
 
 
-    color: var(--green-muted);
+    color: var(--green-muted);
 
 
 
-    white-space: nowrap;
+    white-space: nowrap;
 
 }
 
@@ -2466,25 +2466,25 @@ textarea:focus {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MAP LINK
+   MAP LINK
 
-\========================================================= \*/
+========================================================= */
 
 
 
 a.map-link {
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-weight: 800;
+    font-weight: 800;
 
 
 
-    text-decoration: none;
+    text-decoration: none;
 
 }
 
@@ -2494,7 +2494,7 @@ a.map-link {
 
 a.map-link:hover {
 
-    text-decoration: underline;
+    text-decoration: underline;
 
 }
 
@@ -2502,67 +2502,67 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   TOAST
+   TOAST
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .toast {
 
-    position: fixed;
+    position: fixed;
 
 
 
-    right: 25px;
+    right: 25px;
 
 
 
-    bottom: 25px;
+    bottom: 25px;
 
 
 
-    z-index: 30;
+    z-index: 30;
 
 
 
-    padding: 12px 17px;
+    padding: 12px 17px;
 
 
 
-    border-radius: 12px;
+    border-radius: 12px;
 
 
 
-    background: var(--green-800);
+    background: var(--green-800);
 
 
 
-    color: #ffffff;
+    color: #ffffff;
 
 
 
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow);
 
 
 
-    opacity: 0;
+    opacity: 0;
 
 
 
-    transform:
+    transform:
 
-        translateY(10px);
-
-
-
-    pointer-events: none;
+        translateY(10px);
 
 
 
-    transition: 0.25s;
+    pointer-events: none;
+
+
+
+    transition: 0.25s;
 
 }
 
@@ -2572,11 +2572,11 @@ a.map-link:hover {
 
 .toast.show {
 
-    opacity: 1;
+    opacity: 1;
 
 
 
-    transform: none;
+    transform: none;
 
 }
 
@@ -2584,37 +2584,37 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   PDF
+   PDF
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .pdf-render-host {
 
-    position: fixed;
+    position: fixed;
 
 
 
-    left: -10000px;
+    left: -10000px;
 
 
 
-    top: 0;
+    top: 0;
 
 
 
-    z-index: -1;
+    z-index: -1;
 
 
 
-    width: 794px;
+    width: 794px;
 
 
 
-    background: #ffffff;
+    background: #ffffff;
 
 }
 
@@ -2624,37 +2624,37 @@ a.map-link:hover {
 
 .pdf-sheet {
 
-    position: relative;
+    position: relative;
 
 
 
-    width: 794px;
+    width: 794px;
 
 
 
-    height: 1123px;
+    height: 1123px;
 
 
 
-    overflow: hidden;
+    overflow: hidden;
 
 
 
-    background: #ffffff;
+    background: #ffffff;
 
 
 
-    color: var(--ink);
+    color: var(--ink);
 
 
 
-    font-family:
+    font-family:
 
-        'Nunito',
+        'Nunito',
 
-        Arial,
+        Arial,
 
-        sans-serif;
+        sans-serif;
 
 }
 
@@ -2664,25 +2664,25 @@ a.map-link:hover {
 
 .pdf-top {
 
-    position: relative;
+    position: relative;
 
 
 
-    height: 210px;
+    height: 210px;
 
 
 
-    padding: 42px 60px;
+    padding: 42px 60px;
 
 
 
-    background: var(--pink-100);
+    background: var(--pink-100);
 
 
 
-    border-bottom:
+    border-bottom:
 
-        8px solid var(--green-100);
+        8px solid var(--green-100);
 
 }
 
@@ -2692,19 +2692,19 @@ a.map-link:hover {
 
 .pdf-kicker {
 
-    color: var(--pink-500);
+    color: var(--pink-500);
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    letter-spacing: 5px;
+    letter-spacing: 5px;
 
 }
 
@@ -2714,23 +2714,23 @@ a.map-link:hover {
 
 .pdf-trip {
 
-    margin-top: 8px;
+    margin-top: 8px;
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-size: 42px;
+    font-size: 42px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    line-height: 1.05;
+    line-height: 1.05;
 
 }
 
@@ -2740,43 +2740,43 @@ a.map-link:hover {
 
 .pdf-day {
 
-    position: absolute;
+    position: absolute;
 
 
 
-    right: 60px;
+    right: 60px;
 
 
 
-    top: 48px;
+    top: 48px;
 
 
 
-    padding: 13px 24px;
+    padding: 13px 24px;
 
 
 
-    border:
+    border:
 
-        3px solid var(--green-800);
-
-
-
-    border-radius: 50%;
+        3px solid var(--green-800);
 
 
 
-    font-size: 25px;
+    border-radius: 50%;
 
 
 
-    font-weight: 900;
+    font-size: 25px;
 
 
 
-    transform:
+    font-weight: 900;
 
-        rotate(-3deg);
+
+
+    transform:
+
+        rotate(-3deg);
 
 }
 
@@ -2786,19 +2786,19 @@ a.map-link:hover {
 
 .pdf-date {
 
-    margin-top: 18px;
+    margin-top: 18px;
 
 
 
-    color: var(--green-muted);
+    color: var(--green-muted);
 
 
 
-    font-size: 17px;
+    font-size: 17px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 }
 
@@ -2808,13 +2808,13 @@ a.map-link:hover {
 
 .pdf-body {
 
-    padding:
+    padding:
 
-        30px
+        30px
 
-        60px
+        60px
 
-        105px;
+        105px;
 
 }
 
@@ -2824,7 +2824,7 @@ a.map-link:hover {
 
 .pdf-period {
 
-    margin-bottom: 22px;
+    margin-bottom: 22px;
 
 }
 
@@ -2834,29 +2834,29 @@ a.map-link:hover {
 
 .pdf-period-title {
 
-    margin-bottom: 3px;
+    margin-bottom: 3px;
 
 
 
-    padding-bottom: 5px;
+    padding-bottom: 5px;
 
 
 
-    border-bottom:
+    border-bottom:
 
-        2px solid var(--pink-100);
-
-
-
-    color: var(--pink-500);
+        2px solid var(--pink-100);
 
 
 
-    font-size: 24px;
+    color: var(--pink-500);
 
 
 
-    font-weight: 900;
+    font-size: 24px;
+
+
+
+    font-weight: 900;
 
 }
 
@@ -2866,7 +2866,7 @@ a.map-link:hover {
 
 .pdf-period-title span {
 
-    color: var(--tan);
+    color: var(--tan);
 
 }
 
@@ -2876,35 +2876,35 @@ a.map-link:hover {
 
 .pdf-row {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        78px
+        78px
 
-        1fr
+        1fr
 
-        105px;
-
-
-
-    gap: 13px;
+        105px;
 
 
 
-    align-items: start;
+    gap: 13px;
 
 
 
-    padding: 10px 0;
+    align-items: start;
 
 
 
-    border-bottom:
+    padding: 10px 0;
 
-        1px solid #e6ece8;
+
+
+    border-bottom:
+
+        1px solid #e6ece8;
 
 }
 
@@ -2914,15 +2914,15 @@ a.map-link:hover {
 
 .pdf-time {
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-size: 16px;
+    font-size: 16px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 }
 
@@ -2932,11 +2932,11 @@ a.map-link:hover {
 
 .pdf-place {
 
-    font-size: 16px;
+    font-size: 16px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 }
 
@@ -2948,15 +2948,15 @@ a.map-link:hover {
 
 .pdf-note {
 
-    margin-top: 2px;
+    margin-top: 2px;
 
 
 
-    color: #65736c;
+    color: #65736c;
 
 
 
-    font-size: 12px;
+    font-size: 12px;
 
 }
 
@@ -2966,7 +2966,7 @@ a.map-link:hover {
 
 .pdf-note {
 
-    color: #8b6371;
+    color: #8b6371;
 
 }
 
@@ -2976,19 +2976,19 @@ a.map-link:hover {
 
 .pdf-cost {
 
-    color: var(--green-muted);
+    color: var(--green-muted);
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 
 
-    font-weight: 900;
+    font-weight: 900;
 
 
 
-    text-align: right;
+    text-align: right;
 
 }
 
@@ -2998,47 +2998,47 @@ a.map-link:hover {
 
 .pdf-footer {
 
-    position: absolute;
+    position: absolute;
 
 
 
-    left: 60px;
+    left: 60px;
 
 
 
-    right: 60px;
+    right: 60px;
 
 
 
-    bottom: 45px;
+    bottom: 45px;
 
 
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    padding: 15px 20px;
+    padding: 15px 20px;
 
 
 
-    border-radius: 16px;
+    border-radius: 16px;
 
 
 
-    background: var(--green-100);
+    background: var(--green-100);
 
 
 
-    color: var(--green-800);
+    color: var(--green-800);
 
 
 
-    font-size: 16px;
+    font-size: 16px;
 
 }
 
@@ -3048,15 +3048,15 @@ a.map-link:hover {
 
 .pdf-empty {
 
-    padding: 80px 0;
+    padding: 80px 0;
 
 
 
-    color: #8b9891;
+    color: #8b9891;
 
 
 
-    text-align: center;
+    text-align: center;
 
 }
 
@@ -3064,11 +3064,11 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   TABLET
+   TABLET
 
-\========================================================= \*/
+========================================================= */
 
 
 
@@ -3076,117 +3076,117 @@ a.map-link:hover {
 
 
 
-    .topbar {
+    .topbar {
 
-        align-items: flex-start;
+        align-items: flex-start;
 
 
 
-        flex-direction: column;
+        flex-direction: column;
 
-    }
+    }
 
 
 
 
 
-    .setup-grid {
+    .setup-grid {
 
-        grid-template-columns:
+        grid-template-columns:
 
-            1fr
+            1fr
 
-            1fr;
+            1fr;
 
-    }
+    }
 
 
 
 
 
-    .create-trip {
+    .create-trip {
 
-        grid-column:
+        grid-column:
 
-            1 / -1;
+            1 / -1;
 
-    }
+    }
 
 
 
 
 
-    .planner-shell {
+    .planner-shell {
 
-        grid-template-columns:
+        grid-template-columns:
 
-            1fr;
+            1fr;
 
-    }
+    }
 
 
 
 
 
-    .unscheduled {
+    .unscheduled {
 
-        position: relative;
+        position: relative;
 
 
 
-        top: 0;
+        top: 0;
 
 
 
-        min-height: auto;
+        min-height: auto;
 
-    }
+    }
 
 
 
 
 
-    .drop-list {
+    .drop-list {
 
-        display: flex;
+        display: flex;
 
 
 
-        gap: 10px;
+        gap: 10px;
 
 
 
-        min-height: 120px;
+        min-height: 120px;
 
 
 
-        overflow-x: auto;
+        overflow-x: auto;
 
-    }
+    }
 
 
 
 
 
-    .drop-list .place-card {
+    .drop-list .place-card {
 
-        min-width: 240px;
+        min-width: 240px;
 
-    }
+    }
 
 
 
 
 
-    .summary {
+    .summary {
 
-        align-items: flex-start;
+        align-items: flex-start;
 
 
 
-        flex-direction: column;
+        flex-direction: column;
 
-    }
+    }
 
 }
 
@@ -3194,11 +3194,11 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MOBILE
+   MOBILE
 
-\========================================================= \*/
+========================================================= */
 
 
 
@@ -3206,173 +3206,173 @@ a.map-link:hover {
 
 
 
-    .setup-grid,
+    .setup-grid,
 
-    .form-grid {
+    .form-grid {
 
-        grid-template-columns:
+        grid-template-columns:
 
-            1fr;
+            1fr;
 
-    }
+    }
 
 
 
 
 
-    .wide {
+    .wide {
 
-        grid-column: auto;
+        grid-column: auto;
 
-    }
+    }
 
 
 
 
 
-    .day-column {
+    .day-column {
 
-        flex-basis: 88vw;
+        flex-basis: 88vw;
 
-    }
+    }
 
 
 
 
 
-    .summary-stats {
+    .summary-stats {
 
-        width: 100%;
+        width: 100%;
 
-    }
+    }
 
 
 
 
 
-    .summary-stats div {
+    .summary-stats div {
 
-        flex: 1;
+        flex: 1;
 
-    }
+    }
 
 
 
 
 
-    .header-actions {
+    .header-actions {
 
-        justify-content: flex-start;
+        justify-content: flex-start;
 
-    }
+    }
 
 
 
 
 
-    /\*
+    /*
 
-        Modal gần full-screen trên điện thoại
+        Modal gần full-screen trên điện thoại
 
-    \*/
+    */
 
 
 
-    .modal {
+    .modal {
 
-        padding: 12px;
+        padding: 12px;
 
-    }
+    }
 
 
 
 
 
-    .modal-panel {
+    .modal-panel {
 
-        width: 100%;
+        width: 100%;
 
 
 
-        max-height:
+        max-height:
 
-            calc(100vh - 24px);
+            calc(100vh - 24px);
 
 
 
-        padding: 22px 18px;
+        padding: 22px 18px;
 
 
 
-        border-radius: 20px;
+        border-radius: 20px;
 
-    }
+    }
 
 
 
 
 
-    /\*
+    /*
 
-        Menu: tên món ở trên,
+        Menu: tên món ở trên,
 
-        giá + nút xóa phía dưới
+        giá + nút xóa phía dưới
 
-    \*/
+    */
 
 
 
-    .menu-item {
+    .menu-item {
 
-        grid-template-columns:
+        grid-template-columns:
 
-            minmax(0, 1fr)
+            minmax(0, 1fr)
 
-            115px
+            115px
 
-            34px;
+            34px;
 
-    }
+    }
 
 
 
 
 
-    .menu-heading {
+    .menu-heading {
 
-        align-items: flex-start;
+        align-items: flex-start;
 
-    }
+    }
 
 
 
 
 
-    .add-menu-btn {
+    .add-menu-btn {
 
-        padding: 8px 10px;
+        padding: 8px 10px;
 
 
 
-        font-size: 12px;
+        font-size: 12px;
 
-    }
+    }
 
 }
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MY TRIPS
+   MY TRIPS
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .trips-panel {
 
-    width: min(760px, 96vw);
+    width: min(760px, 96vw);
 
 }
 
@@ -3382,15 +3382,15 @@ a.map-link:hover {
 
 .trips-description {
 
-    margin-bottom: 22px;
+    margin-bottom: 22px;
 
 
 
-    color: var(--muted);
+    color: var(--muted);
 
 
 
-    font-size: 13px;
+    font-size: 13px;
 
 }
 
@@ -3400,21 +3400,21 @@ a.map-link:hover {
 
 .saved-trips-list {
 
-    display: grid;
+    display: grid;
 
 
 
-    grid-template-columns:
+    grid-template-columns:
 
-        repeat(2, minmax(0, 1fr));
-
-
-
-    gap: 14px;
+        repeat(2, minmax(0, 1fr));
 
 
 
-    margin-top: 20px;
+    gap: 14px;
+
+
+
+    margin-top: 20px;
 
 }
 
@@ -3422,51 +3422,51 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   SAVED TRIP CARD
+   SAVED TRIP CARD
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .saved-trip-card {
 
-    padding: 18px;
+    padding: 18px;
 
 
 
-    border:
+    border:
 
-        1px solid var(--pink-100);
-
-
-
-    border-radius: 18px;
+        1px solid var(--pink-100);
 
 
 
-    background:
-
-        linear-gradient(
-
-            145deg,
-
-            #ffffff,
-
-            var(--pink-50)
-
-        );
+    border-radius: 18px;
 
 
 
-    transition:
+    background:
 
-        transform 0.18s,
+        linear-gradient(
 
-        box-shadow 0.18s,
+            145deg,
 
-        border-color 0.18s;
+            #ffffff,
+
+            var(--pink-50)
+
+        );
+
+
+
+    transition:
+
+        transform 0.18s,
+
+        box-shadow 0.18s,
+
+        border-color 0.18s;
 
 }
 
@@ -3476,23 +3476,23 @@ a.map-link:hover {
 
 .saved-trip-card:hover {
 
-    transform:
+    transform:
 
-        translateY(-2px);
-
-
-
-    border-color:
-
-        var(--pink-200);
+        translateY(-2px);
 
 
 
-    box-shadow:
+    border-color:
 
-        0 10px 25px
+        var(--pink-200);
 
-        rgba(44, 89, 81, 0.08);
+
+
+    box-shadow:
+
+        0 10px 25px
+
+        rgba(44, 89, 81, 0.08);
 
 }
 
@@ -3502,19 +3502,19 @@ a.map-link:hover {
 
 .saved-trip-top {
 
-    display: flex;
+    display: flex;
 
 
 
-    justify-content: space-between;
+    justify-content: space-between;
 
 
 
-    align-items: flex-start;
+    align-items: flex-start;
 
 
 
-    gap: 15px;
+    gap: 15px;
 
 }
 
@@ -3524,17 +3524,17 @@ a.map-link:hover {
 
 .saved-trip-top h3 {
 
-    margin:
+    margin:
 
-        6px 0 0;
-
-
-
-    color: var(--green-800);
+        6px 0 0;
 
 
 
-    font-size: 19px;
+    color: var(--green-800);
+
+
+
+    font-size: 19px;
 
 }
 
@@ -3544,47 +3544,47 @@ a.map-link:hover {
 
 .saved-trip-days {
 
-    display: inline-block;
+    display: inline-block;
 
 
 
-    padding:
+    padding:
 
-        4px 9px;
-
-
-
-    border-radius: 999px;
+        4px 9px;
 
 
 
-    background:
-
-        var(--green-100);
+    border-radius: 999px;
 
 
 
-    color:
+    background:
 
-        var(--green-800);
-
-
-
-    font-size: 10px;
+        var(--green-100);
 
 
 
-    font-weight: 900;
+    color:
+
+        var(--green-800);
 
 
 
-    text-transform: uppercase;
+    font-size: 10px;
 
 
 
-    letter-spacing:
+    font-weight: 900;
 
-        0.08em;
+
+
+    text-transform: uppercase;
+
+
+
+    letter-spacing:
+
+        0.08em;
 
 }
 
@@ -3592,49 +3592,49 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   TRIP INFORMATION
+   TRIP INFORMATION
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .saved-trip-info {
 
-    display: flex;
+    display: flex;
 
 
 
-    flex-direction: column;
+    flex-direction: column;
 
 
 
-    gap: 6px;
+    gap: 6px;
 
 
 
-    margin:
+    margin:
 
-        16px 0;
-
-
-
-    color:
-
-        #65736c;
+        16px 0;
 
 
 
-    font-size:
+    color:
 
-        12px;
+        #65736c;
 
 
 
-    font-weight:
+    font-size:
 
-        700;
+        12px;
+
+
+
+    font-weight:
+
+        700;
 
 }
 
@@ -3642,29 +3642,29 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   OPEN TRIP
+   OPEN TRIP
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .open-trip-btn {
 
-    width: 100%;
+    width: 100%;
 
 
 
-    background:
+    background:
 
-        var(--pink-100);
+        var(--pink-100);
 
 
 
-    color:
+    color:
 
-        var(--pink-500);
+        var(--pink-500);
 
 }
 
@@ -3674,9 +3674,9 @@ a.map-link:hover {
 
 .open-trip-btn:hover {
 
-    background:
+    background:
 
-        var(--pink-200);
+        var(--pink-200);
 
 }
 
@@ -3684,75 +3684,75 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   DELETE SAVED TRIP
+   DELETE SAVED TRIP
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .delete-saved-trip {
 
-    flex-shrink: 0;
+    flex-shrink: 0;
 
 
 
-    width: 30px;
+    width: 30px;
 
 
 
-    height: 30px;
+    height: 30px;
 
 
 
-    display: grid;
+    display: grid;
 
 
 
-    place-items: center;
+    place-items: center;
 
 
 
-    padding: 0;
+    padding: 0;
 
 
 
-    border: 0;
+    border: 0;
 
 
 
-    border-radius: 50%;
+    border-radius: 50%;
 
 
 
-    background:
+    background:
 
-        #f8edef;
-
-
-
-    color:
-
-        var(--pink-500);
+        #f8edef;
 
 
 
-    font-size:
+    color:
 
-        18px;
-
-
-
-    font-weight:
-
-        900;
+        var(--pink-500);
 
 
 
-    transition:
+    font-size:
 
-        0.15s;
+        18px;
+
+
+
+    font-weight:
+
+        900;
+
+
+
+    transition:
+
+        0.15s;
 
 }
 
@@ -3762,15 +3762,15 @@ a.map-link:hover {
 
 .delete-saved-trip:hover {
 
-    background:
+    background:
 
-        var(--pink-500);
+        var(--pink-500);
 
 
 
-    color:
+    color:
 
-        #ffffff;
+        #ffffff;
 
 }
 
@@ -3778,51 +3778,51 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   EMPTY TRIPS
+   EMPTY TRIPS
 
-\========================================================= \*/
+========================================================= */
 
 
 
 .empty-trips {
 
-    grid-column:
+    grid-column:
 
-        1 / -1;
-
-
-
-    padding:
-
-        50px 20px;
+        1 / -1;
 
 
 
-    border:
+    padding:
 
-        2px dashed
-
-        var(--pink-100);
+        50px 20px;
 
 
 
-    border-radius:
+    border:
 
-        18px;
+        2px dashed
 
-
-
-    text-align:
-
-        center;
+        var(--pink-100);
 
 
 
-    color:
+    border-radius:
 
-        var(--muted);
+        18px;
+
+
+
+    text-align:
+
+        center;
+
+
+
+    color:
+
+        var(--muted);
 
 }
 
@@ -3832,21 +3832,21 @@ a.map-link:hover {
 
 .empty-trips-icon {
 
-    margin-bottom:
+    margin-bottom:
 
-        12px;
-
-
-
-    color:
-
-        var(--pink-500);
+        12px;
 
 
 
-    font-size:
+    color:
 
-        38px;
+        var(--pink-500);
+
+
+
+    font-size:
+
+        38px;
 
 }
 
@@ -3856,21 +3856,21 @@ a.map-link:hover {
 
 .empty-trips strong {
 
-    display:
+    display:
 
-        block;
-
-
-
-    color:
-
-        var(--green-800);
+        block;
 
 
 
-    font-size:
+    color:
 
-        16px;
+        var(--green-800);
+
+
+
+    font-size:
+
+        16px;
 
 }
 
@@ -3880,15 +3880,15 @@ a.map-link:hover {
 
 .empty-trips p {
 
-    margin:
+    margin:
 
-        5px 0 0;
+        5px 0 0;
 
 
 
-    font-size:
+    font-size:
 
-        12px;
+        12px;
 
 }
 
@@ -3896,11 +3896,11 @@ a.map-link:hover {
 
 
 
-/\* =========================================================
+/* =========================================================
 
-   MOBILE
+   MOBILE
 
-\========================================================= \*/
+========================================================= */
 
 
 
@@ -3908,13 +3908,13 @@ a.map-link:hover {
 
 
 
-    .saved-trips-list {
+    .saved-trips-list {
 
-        grid-template-columns:
+        grid-template-columns:
 
-            1fr;
+            1fr;
 
-    }
+    }
 
 }
 
@@ -4294,4 +4294,3 @@ a.map-link:hover {
         max-width: calc(100vw - 24px);
     }
 }
-
