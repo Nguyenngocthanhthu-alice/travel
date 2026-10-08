@@ -4638,3 +4638,13 @@ a.map-link:hover {
 .countdown-numbers strong { display:block; font-size:clamp(24px,4vw,42px); font-weight:900; color:var(--green-800); font-variant-numeric:tabular-nums; }
 .countdown-numbers span { display:block; color:var(--muted); font-size:12px; font-weight:800; }
 .countdown-note { margin:12px 0 0; font-size:13px; color:var(--muted); }
+
+/* PLACE BANK REGION FOLDERS */
+.region-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 0 9px;font-size:13px}
+.region-toolbar .btn{padding:7px 10px;font-size:11px}
+.place-regions{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.region-folder{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:13px 11px;border:1px solid var(--green-100);background:var(--pink-50);border-radius:12px;color:var(--green-800);font-weight:800}
+.region-folder span:last-child{font-size:11px;color:var(--green-muted);white-space:nowrap}
+.region-folder:hover{background:var(--green-100)}
+.region-back{border:0;background:transparent;text-align:left;color:var(--pink-500);font-weight:900;padding:6px 0}
+.region-current{padding:10px;background:var(--green-100);border-radius:12px;color:var(--green-800);font-weight:900}

@@ -107,6 +107,8 @@
           </div>
           <span class="count" id="unscheduledCount">0</span>
         </div>
+        <div class="region-toolbar"><strong>Khu vực</strong><button type="button" class="btn secondary" id="addRegionBtn">＋ Tạo khu vực</button></div>
+        <div id="placeRegions" class="place-regions"></div>
         <div class="place-filter" aria-label="Lọc địa điểm theo chức năng">
           <div class="place-filter-label">Lọc theo chức năng</div>
           <div class="place-filter-chips" id="placeFilterChips"></div>
@@ -165,6 +167,9 @@
               <option>Nghỉ ngơi</option>
               <option>Khác</option>
             </select>
+          </label>
+          <label>Khu vực
+            <select id="placeRegion"><option>Chưa phân loại</option></select>
           </label>
           <label>Chi phí (VND)
             <input id="placeCost" type="number" min="0" value="0">

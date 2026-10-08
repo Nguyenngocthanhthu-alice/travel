@@ -82,6 +82,15 @@ let currentMenu = [];
 let placeBank = [];
 let placeBankReady = false;
 let activePlaceFilter = 'Tất cả';
+let activeRegion = null;
+const REGION_STORAGE_KEY = 'tripPlannerRegionsV1';
+const UNASSIGNED_REGION = 'Chưa phân loại';
+let regionNames = [];
+function placeRegion(place) { return String(place?.region || UNASSIGNED_REGION).trim() || UNASSIGNED_REGION; }
+function loadRegions() { try { regionNames = JSON.parse(localStorage.getItem(REGION_STORAGE_KEY)) || []; } catch { regionNames = []; } }
+function saveRegions() { localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify(regionNames)); }
+function allRegions() { return [UNASSIGNED_REGION, ...new Set([...regionNames, ...placeBank.map(placeRegion)].filter(r => r !== UNASSIGNED_REGION))].filter((v,i,a)=>a.indexOf(v)===i); }
+
 
 function uid() {
     return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -143,6 +152,7 @@ function placeTemplate(place = {}) {
         id: place.id || uid(),
         name: place.name || '',
         category: place.category || 'Tham quan',
+        region: placeRegion(place),
         address: place.address || '',
         cost: Math.max(0, Number(place.cost || 0)),
         notes: place.notes || '',
@@ -183,6 +193,7 @@ function placeDuplicateKey(place = {}) {
     return JSON.stringify({
         name: normal(place.name),
         category: normal(place.category || 'Tham quan'),
+        region: normal(placeRegion(place)),
         address: normal(place.address),
         cost: Math.max(0, Number(place.cost || 0)),
         notes: normal(place.notes),
@@ -272,6 +283,7 @@ async function savePlaceBank() {
             doc(db, 'placeBank', PLACE_BANK_DOC_ID),
             {
                 places: clone(placeBank),
+                regions: allRegions(),
                 updatedAt: serverTimestamp(),
                 lastEditor: auth.currentUser.uid
             },
@@ -293,6 +305,7 @@ async function loadPlaceBankFromFirebase() {
         if (snap.exists()) {
             const data = snap.data() || {};
             const remote = Array.isArray(data.places) ? data.places.map(placeTemplate) : [];
+            if (Array.isArray(data.regions)) { regionNames = [...new Set([...regionNames, ...data.regions].filter(r => r && r !== UNASSIGNED_REGION))]; saveRegions(); }
 
             // Start with Firebase data, then merge local data safely.
             // Same names are allowed; only exact duplicate cards are collapsed.
@@ -973,11 +986,20 @@ function render() {
         .filter(place => !scheduledIds.has(place.id))
         .map(place => ({ ...clone(place), date: null, time: null }));
 
-    renderPlaceFilters(unscheduled);
+    const regions = allRegions();
+    if (activeRegion !== null && !regions.includes(activeRegion)) activeRegion = null;
+    const regionHost = $('placeRegions');
+    if (regionHost) {
+        regionHost.innerHTML = activeRegion === null
+          ? regions.map(region => `<button type="button" class="region-folder" data-open-region="${esc(region)}"><span>📁 ${esc(region)}</span><span>${unscheduled.filter(p => placeRegion(p) === region).length} địa điểm ›</span></button>`).join('')
+          : `<button type="button" class="region-back" data-back-regions>← Tất cả khu vực</button><div class="region-current">📂 ${esc(activeRegion)}</div>`;
+    }
+    const regionPlaces = activeRegion === null ? [] : unscheduled.filter(place => placeRegion(place) === activeRegion);
+    renderPlaceFilters(regionPlaces);
 
     const filteredUnscheduled = activePlaceFilter === 'Tất cả'
-        ? unscheduled
-        : unscheduled.filter(place => (place.category || 'Khác') === activePlaceFilter);
+        ? regionPlaces
+        : regionPlaces.filter(place => (place.category || 'Khác') === activePlaceFilter);
 
     if ($('unscheduledCount')) $('unscheduledCount').textContent = filteredUnscheduled.length;
 
@@ -1264,6 +1286,15 @@ function bindDrag() {
    PLACE MODAL
 ========================================================= */
 
+function refreshRegionOptions(selected = UNASSIGNED_REGION) {
+    const input = $('placeRegion');
+    if (!input) return;
+    const regions = allRegions();
+    if (!regions.includes(selected)) regions.push(selected);
+    input.innerHTML = regions.map(region => `<option value="${esc(region)}">${esc(region)}</option>`).join('');
+    input.value = selected;
+}
+
 function openPlaceModal(place = null) {
     if (!$('placeModal')) return;
 
@@ -1271,6 +1302,7 @@ function openPlaceModal(place = null) {
     $('placeId').value = place?.id || '';
     $('placeName').value = place?.name || '';
     $('placeCategory').value = place?.category || 'Tham quan';
+    refreshRegionOptions(place?.region || activeRegion || UNASSIGNED_REGION);
     $('placeCost').value = Number(place?.cost || 0);
     $('placeAddress').value = place?.address || '';
     $('placeNotes').value = place?.notes || '';
@@ -1532,6 +1564,20 @@ function bindStaticEvents() {
     $('newTripBtn')?.addEventListener('click', createNewTrip);
     $('createTripFromListBtn')?.addEventListener('click', createNewTrip);
 
+    $('placeRegions')?.addEventListener('click', event => {
+        const folder = event.target.closest('[data-open-region]');
+        if (folder) { activeRegion = folder.dataset.openRegion; activePlaceFilter = 'Tất cả'; render(); return; }
+        if (event.target.closest('[data-back-regions]')) { activeRegion = null; activePlaceFilter = 'Tất cả'; render(); }
+    });
+    $('addRegionBtn')?.addEventListener('click', () => {
+        const name = prompt('Tên khu vực mới (ví dụ: Đà Lạt):')?.trim();
+        if (!name) return;
+        if (!allRegions().some(r => r.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'))) {
+            regionNames.push(name); saveRegions();
+        }
+        activeRegion = allRegions().find(r => r.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi')) || name;
+        activePlaceFilter = 'Tất cả'; render();
+    });
     $('placeFilterChips')?.addEventListener('click', event => {
         const button = event.target.closest('[data-place-filter]');
         if (!button) return;
@@ -1635,6 +1681,7 @@ function bindStaticEvents() {
         const data = {
             name: $('placeName').value.trim(),
             category,
+            region: $('placeRegion')?.value || UNASSIGNED_REGION,
             address: $('placeAddress').value.trim(),
             cost: finalCost,
             notes: $('placeNotes').value.trim(),
@@ -2442,6 +2489,7 @@ async function exportPDF() {
 async function init() {
     load();
     loadLocalPlaceBank();
+    loadRegions();
     cleanPlaceBankDuplicates();
 
     // Upgrade old data: places already created in the current trip become permanent.
