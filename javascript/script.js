@@ -897,6 +897,55 @@ function dayPeriodIdForTime(time) {
     return 'evening';
 }
 
+// Countdown uses local calendar dates; it does not modify the saved trip.
+function updateTripCountdown() {
+    const root = $('tripCountdown');
+    if (!root) return;
+    const start = state.trip?.start;
+    const end = state.trip?.end;
+    const status = $('countdownStatus');
+    const note = $('countdownNote');
+    const numbers = $('countdownNumbers');
+    const setNumbers = (d, h, m) => {
+        $('countdownDays').textContent = String(d).padStart(2, '0');
+        $('countdownHours').textContent = String(h).padStart(2, '0');
+        $('countdownMinutes').textContent = String(m).padStart(2, '0');
+    };
+    if (!start) {
+        status.textContent = 'Chưa chọn ngày';
+        note.textContent = 'Chọn ngày bắt đầu để xem thời gian còn lại.';
+        numbers.hidden = true;
+        return;
+    }
+    const now = new Date();
+    const [sy, sm, sd] = start.split('-').map(Number);
+    const startAt = new Date(sy, sm - 1, sd);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endParts = (end || start).split('-').map(Number);
+    const endAt = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+    const pad = n => String(n).padStart(2, '0');
+    const format = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    if (today > endAt) {
+        status.textContent = '✓ Đã kết thúc';
+        note.textContent = `Chuyến đi kết thúc ngày ${format(endAt)}.`;
+        numbers.hidden = true;
+    } else if (today >= startAt) {
+        status.textContent = today.getTime() === startAt.getTime() ? '🎉 Hôm nay khởi hành!' : '🌴 Đang trong chuyến đi';
+        note.textContent = `Lịch trình: ${format(startAt)} – ${format(endAt)}.`;
+        numbers.hidden = true;
+    } else {
+        const remaining = startAt.getTime() - now.getTime();
+        const minutes = Math.max(0, Math.ceil(remaining / 60000));
+        const days = Math.floor(minutes / 1440);
+        const hours = Math.floor((minutes % 1440) / 60);
+        const mins = minutes % 60;
+        setNumbers(days, hours, mins);
+        numbers.hidden = false;
+        status.textContent = 'Sắp khởi hành';
+        note.textContent = `Khởi hành ngày ${format(startAt)}.`;
+    }
+}
+
 function render() {
     normalizeState();
 
@@ -908,6 +957,7 @@ function render() {
     if ($('people')) $('people').value = state.trip.people || 1;
 
     applyDateLimits();
+    updateTripCountdown();
     if ($('tripBudget')) $('tripBudget').value = Number(state.trip.budget || 0);
 
     if ($('tripBadge')) {
@@ -2399,6 +2449,7 @@ async function init() {
     state.places = (state.places || []).filter(place => place.date);
 
     bindStaticEvents();
+    setInterval(updateTripCountdown, 60000);
     $('excelBtn')?.addEventListener('click', exportExcel);
     $('pdfBtn')?.addEventListener('click', exportPDF);
     render();

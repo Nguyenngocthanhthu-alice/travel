@@ -17,8 +17,7 @@
     <div>
       <p class="eyebrow">PLAN • DRAG • GO</p>
       <h1>✈ Trip Planner</h1>
-      <p> Let's plan your perfect trip!</p>
-     
+      <p class="subtitle">Sắp xếp chuyến đi theo cách của bạn.</p>
     </div>
     <div class="header-actions">
       <button class="btn secondary" id="resetBtn">Tạo chuyến mới</button>
@@ -65,7 +64,17 @@
           <input id="tripBudget" type="number" min="0" step="1000" value="5000000" placeholder="Ví dụ: 5000000">
         </label>
         <button class="btn primary create-trip" id="createTripBtn">Tạo / cập nhật lịch</button>
-      </div>   
+      </div>
+    </section>
+
+    <section class="trip-countdown card" id="tripCountdown" aria-live="off">
+      <div class="countdown-heading"><div><span class="mini-label">TRIP COUNTDOWN</span><h2>✈ Đếm ngược chuyến đi</h2></div><span class="countdown-status" id="countdownStatus">Đang tính...</span></div>
+      <div class="countdown-numbers" id="countdownNumbers">
+        <div><strong id="countdownDays">00</strong><span>Ngày</span></div>
+        <div><strong id="countdownHours">00</strong><span>Giờ</span></div>
+        <div><strong id="countdownMinutes">00</strong><span>Phút</span></div>
+      </div>
+      <p class="countdown-note" id="countdownNote"></p>
     </section>
 
     <section class="budget-card card" id="budgetCard">
