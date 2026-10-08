@@ -2452,26 +2452,59 @@ async function exportPDF() {
         const pages = [...host.querySelectorAll('.pdf-sheet')];
 
         for (let index = 0; index < pages.length; index++) {
-            if (index > 0) doc.addPage();
+            const sheet = pages[index];
 
-            const canvas = await html2canvas(pages[index], {
+            // Let the full day's content determine the rendered height.
+            // The old fixed 1123px sheet + overflow:hidden cut off long days.
+            sheet.style.height = 'auto';
+            sheet.style.minHeight = '1123px';
+            sheet.style.overflow = 'visible';
+            sheet.style.display = 'flex';
+            sheet.style.flexDirection = 'column';
+            sheet.style.boxSizing = 'border-box';
+
+            const body = sheet.querySelector('.pdf-body');
+            if (body) {
+                body.style.flex = '1 0 auto';
+                body.style.paddingBottom = '24px';
+            }
+            const footer = sheet.querySelector('.pdf-footer');
+            if (footer) {
+                footer.style.position = 'static';
+                footer.style.margin = '0 60px 45px';
+                footer.style.flexShrink = '0';
+            }
+
+            // Measure after layout, including notes, menus and wrapped addresses.
+            const captureWidth = Math.ceil(sheet.scrollWidth);
+            const captureHeight = Math.ceil(sheet.scrollHeight);
+            const canvas = await html2canvas(sheet, {
                 scale: 2,
+                width: captureWidth,
+                height: captureHeight,
+                windowWidth: Math.max(document.documentElement.clientWidth, captureWidth),
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 logging: false
             });
 
-            const img = canvas.toDataURL('image/jpeg', 0.94);
+            // Fit the ENTIRE day onto one A4 page without cropping or stretching.
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 8;
+            const fit = Math.min(
+                (pageWidth - 2 * margin) / canvas.width,
+                (pageHeight - 2 * margin) / canvas.height
+            );
+            const imageWidth = canvas.width * fit;
+            const imageHeight = canvas.height * fit;
+            const x = (pageWidth - imageWidth) / 2;
+            const y = (pageHeight - imageHeight) / 2;
 
+            if (index > 0) doc.addPage();
             doc.addImage(
-                img,
-                'JPEG',
-                0,
-                0,
-                210,
-                297,
-                undefined,
-                'FAST'
+                canvas.toDataURL('image/jpeg', 0.94),
+                'JPEG', x, y, imageWidth, imageHeight, undefined, 'FAST'
             );
         }
 
@@ -2629,18 +2662,49 @@ function confirmOutfitEditor() {
     if(i===-1)wardrobeOutfits.push(item);else wardrobeOutfits[i]=item;
     closeOutfitEditor();renderWardrobeOutfits();
 }
+function wardrobeSaveErrorMessage(err) {
+    const code = String(err?.code || '');
+    const message = String(err?.message || '');
+    if (code.includes('permission-denied')) return 'Firebase từ chối quyền ghi (permission-denied). Hãy kiểm tra Firestore Rules cho /wardrobes/{wardrobeId} và Anonymous Authentication.';
+    if (code.includes('unauthenticated')) return 'Phiên đăng nhập Firebase chưa hợp lệ. Hãy tải lại trang và thử lại.';
+    if (code.includes('unavailable') || code.includes('deadline-exceeded')) return 'Không kết nối được Firebase. Hãy kiểm tra mạng và thử lại.';
+    if (code.includes('resource-exhausted') || /too large|maximum size|exceeds.*size|1 mib|1048576/i.test(message)) return 'Tài liệu Firestore quá lớn. Hãy giảm số ảnh hoặc xóa ảnh ở các thẻ outfit trong ngày.';
+    return `Lưu tủ đồ thất bại${code ? ` (${code})` : ''}: ${message || 'Lỗi không xác định'}`;
+}
+function wardrobePayloadBytes(payload) {
+    // Conservative estimate for Firestore document size, including UTF-8 text and base64 images.
+    return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
 async function saveWardrobeDay() {
-    if(wardrobeBusy||!wardrobeTripId||!wardrobeDate)return;
-    wardrobeBusy=true;$('saveWardrobeBtn').disabled=true;
+    if (wardrobeBusy || !wardrobeTripId || !wardrobeDate) return;
+    const payload = {
+        tripId: wardrobeTripId,
+        date: wardrobeDate,
+        outfits: wardrobeOutfits,
+        updatedAt: serverTimestamp()
+    };
+    // Leave headroom for Firestore field names, document name, and other overhead.
+    const bytes = wardrobePayloadBytes({ ...payload, updatedAt: null });
+    if (bytes > 850000) {
+        alert(`Không thể lưu: ảnh và ghi chú của ngày này chiếm khoảng ${(bytes / 1024).toFixed(0)} KiB, vượt ngưỡng an toàn 830 KiB. Hãy xóa bớt ảnh ở các thẻ outfit rồi lưu lại.`);
+        return;
+    }
+    wardrobeBusy = true;
+    $('saveWardrobeBtn').disabled = true;
     try {
         await ensureFirebaseAuth();
-        await setDoc(doc(db,'wardrobes',wardrobeDocId(wardrobeTripId,wardrobeDate)),{
-            tripId:wardrobeTripId,date:wardrobeDate,outfits:wardrobeOutfits,updatedAt:serverTimestamp()
-        });
-        toast('Đã lưu tủ đồ lên Firebase ✓');setWardrobeMode('view');
-    } catch(err){console.error('Wardrobe save:',err);alert('Không lưu được tủ đồ. Kiểm tra Rules hoặc kích thước ảnh (Firestore tối đa 1 MiB/tài liệu).');}
-    finally{wardrobeBusy=false;$('saveWardrobeBtn').disabled=false;}
+        await setDoc(doc(db, 'wardrobes', wardrobeDocId(wardrobeTripId, wardrobeDate)), payload);
+        toast('Đã lưu tủ đồ lên Firebase ✓');
+        setWardrobeMode('view');
+    } catch (err) {
+        console.error('Wardrobe save:', err);
+        alert(wardrobeSaveErrorMessage(err));
+    } finally {
+        wardrobeBusy = false;
+        $('saveWardrobeBtn').disabled = false;
+    }
 }
+
 function bindWardrobeEvents() {
     $('wardrobeBtn')?.addEventListener('click',openWardrobe);
     $('closeWardrobeBtn')?.addEventListener('click',closeWardrobe);
