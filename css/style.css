@@ -4648,3 +4648,54 @@ a.map-link:hover {
 .region-folder:hover{background:var(--green-100)}
 .region-back{border:0;background:transparent;text-align:left;color:var(--pink-500);font-weight:900;padding:6px 0}
 .region-current{padding:10px;background:var(--green-100);border-radius:12px;color:var(--green-800);font-weight:900}
+
+/* Trip wardrobe - independent overlay */
+.wardrobe-panel{width:min(960px,96vw);max-height:calc(100vh - 35px)}
+.wardrobe-days{display:flex;gap:9px;overflow-x:auto;padding:12px 0 18px}
+.wardrobe-day{flex:0 0 auto;border:1px solid var(--pink-200);border-radius:14px;background:#fff;padding:10px 14px;color:var(--green-800);font-weight:900}
+.wardrobe-day.active{background:var(--green-800);color:#fff;border-color:var(--green-800)}
+.wardrobe-editor{background:var(--pink-50);border:1px solid var(--pink-100);border-radius:18px;padding:18px}
+.wardrobe-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(135px,1fr));gap:12px;margin-top:15px}
+.wardrobe-photo{position:relative;border-radius:12px;overflow:hidden;background:white;border:1px solid var(--pink-100)}
+.wardrobe-photo img{width:100%;height:170px;object-fit:cover;display:block}
+.wardrobe-photo button{position:absolute;right:5px;top:5px;background:#fff;border:0;border-radius:20px;padding:4px 9px;color:#bf5079;font-weight:900}
+
+/* Wardrobe: show that day's itinerary only inside the wardrobe */
+.wardrobe-itinerary{margin:12px 0 20px;padding:15px;border:1px solid #dcebe2;border-radius:15px;background:#fff}
+.wardrobe-itinerary-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;color:var(--green-800)}
+.wardrobe-itinerary-head span{font-size:12px;color:var(--muted);font-weight:800}
+.wardrobe-day-places{display:grid;gap:8px;max-height:230px;overflow-y:auto}
+.wardrobe-itinerary-place{display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:11px;background:#f6faf7}
+.wardrobe-itinerary-time{flex:0 0 95px;color:var(--pink-500);font-weight:900;font-size:12px}
+.wardrobe-itinerary-place strong{display:block;font-size:13px;color:var(--ink)}
+.wardrobe-itinerary-place small{display:block;margin-top:3px;font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.wardrobe-empty-places{margin:0;color:var(--muted);font-size:13px}
+@media(max-width:480px){.wardrobe-itinerary-place{gap:8px}.wardrobe-itinerary-time{flex-basis:76px}}
+
+/* WARDROBE FULL PAGE (not modal) */
+.wardrobe-page{min-height:100vh;padding:28px clamp(16px,4vw,60px) 70px;background:linear-gradient(135deg,#f2dce2,#fff 42%,#dcebe2)}
+.wardrobe-page-inner{max-width:1650px;margin:auto}
+.wardrobe-page-head{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+.wardrobe-page-head h1{margin:6px 0;color:var(--green-800)}
+.wardrobe-page-actions{display:flex;gap:10px;flex-wrap:wrap}
+.wardrobe-layout{display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,1.3fr);gap:20px;margin-top:16px;align-items:start}
+.wardrobe-readonly,.wardrobe-closet{padding:20px;min-width:0}
+.wardrobe-periods{display:grid;gap:14px}
+.wardrobe-period{padding:14px;background:#fff;border:1px solid #e4eae6;border-radius:15px;min-height:100px}
+.wardrobe-period h3{font-size:15px;margin:0 0 12px;color:var(--green-800)}
+.wardrobe-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}
+.outfit-card{overflow:hidden;border:1px solid var(--pink-100);border-radius:15px;background:#fff;box-shadow:0 4px 12px #2c595112}
+.outfit-card.editable{cursor:grab;border-color:var(--pink-500)}
+.outfit-card.editable:active{cursor:grabbing}
+.outfit-card img,.outfit-placeholder{display:block;width:100%;height:150px;object-fit:cover;background:var(--pink-50)}
+.outfit-placeholder{display:grid;place-items:center;font-size:40px}
+.outfit-card-body{padding:12px;overflow-wrap:anywhere}
+.outfit-card-body strong{display:block;color:var(--green-800)}
+.outfit-card-body p{font-size:12px;white-space:pre-wrap;margin:7px 0;color:var(--muted)}
+.outfit-card-body small{font-size:11px;color:var(--pink-500)}
+.wardrobe-drop-zone{border:2px dashed var(--green-100)}
+.wardrobe-drop-zone:has(.outfit-card.editable){border-color:var(--pink-200)}
+.wardrobe-closet #addOutfitBtn{margin:0 0 16px}
+.wardrobe-day-places{max-height:none;overflow:visible}
+#outfitModal label{margin-top:12px}
+@media(max-width:800px){.wardrobe-layout{grid-template-columns:1fr}.wardrobe-page{padding:18px 12px 50px}}

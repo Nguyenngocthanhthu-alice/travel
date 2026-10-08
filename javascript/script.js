@@ -576,6 +576,7 @@ async function saveCurrentTrip() {
         await ensureFirebaseAuth();
 
         if (!currentTripId) currentTripId = createTripId();
+        $('wardrobeBtn')?.classList.remove('hidden');
 
         const payload = {
             trip: clone(state.trip),
@@ -679,6 +680,7 @@ function openSavedTrip(tripId) {
     normalizeState();
     save();
     render();
+    $('wardrobeBtn')?.classList.remove('hidden');
     closeTripsModal();
     toast(`Đã mở "${state.trip.name}"`);
 }
@@ -719,6 +721,7 @@ function createNewTrip() {
     }
 
     currentTripId = null;
+    $('wardrobeBtn')?.classList.add('hidden');
 
     state = {
         trip: {
@@ -2482,6 +2485,195 @@ async function exportPDF() {
     }
 }
 
+
+/* =========================================================
+   WARDROBE PAGE: read-only itinerary, draggable outfit cards.
+   Stored separately per trip/date; old day-level notes are migrated.
+========================================================= */
+let wardrobeTripId = null, wardrobeDate = null, wardrobeBusy = false;
+let wardrobeMode = 'view', wardrobeOutfits = [], editingOutfitId = null, outfitDraftPhotos = [];
+const WARDROBE_PERIODS = [
+    {id:'morning', title:'🌅 Buổi sáng'},
+    {id:'afternoon', title:'🌤️ Buổi chiều'},
+    {id:'evening', title:'🌙 Buổi tối'}
+];
+function wardrobeDocId(tripId,date) { return `${tripId}_${date}`; }
+function wardrobeDates() { return datesBetween(state.trip.start,state.trip.end); }
+function wardrobePeriod(time) {
+    if (!time) return 'morning';
+    const hour = Number(time.slice(0,2));
+    return hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+}
+async function openWardrobe() {
+    if (!currentTripId) { toast('Hãy lưu chuyến đi trước khi mở tủ đồ.'); return; }
+    const dates=wardrobeDates();
+    if (!dates.length) { toast('Chuyến đi chưa có ngày hợp lệ.'); return; }
+    wardrobeTripId=currentTripId;
+    wardrobeMode='view';
+    $('wardrobeTitle').textContent=`👗 Tủ đồ — ${state.trip.name || 'Chuyến đi'}`;
+    document.querySelector('.topbar').classList.add('hidden');
+    document.querySelector('main').classList.add('hidden');
+    $('wardrobePage').classList.remove('hidden');
+    window.scrollTo(0,0);
+    setWardrobeMode('view');
+    await selectWardrobeDate(dates[0]);
+}
+function closeWardrobe() {
+    if (wardrobeMode==='edit' && !confirm('Rời tủ đồ? Các thay đổi chưa lưu sẽ bị mất.')) return;
+    $('wardrobePage').classList.add('hidden');
+    document.querySelector('.topbar').classList.remove('hidden');
+    document.querySelector('main').classList.remove('hidden');
+    window.scrollTo(0,0);
+}
+function setWardrobeMode(mode) {
+    wardrobeMode=mode;
+    $('wardrobeModeBtn').textContent=mode==='view'?'✏️ Chỉnh sửa':'👁️ Chế độ xem';
+    $('wardrobeModeLabel').textContent=mode==='view'?'Chế độ xem':'Chế độ chỉnh sửa';
+    document.querySelectorAll('.wardrobe-edit-only').forEach(el=>el.classList.toggle('hidden',mode!=='edit'));
+    renderWardrobeOutfits();
+}
+function renderWardrobeDayPlaces(date) {
+    const places=(state.places||[]).filter(p=>p.date===date).sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+    $('wardrobePlaceCount').textContent=`${places.length} địa điểm`;
+    $('wardrobeDayPlaces').innerHTML=WARDROBE_PERIODS.map(period=>{
+        const items=places.filter(p=>wardrobePeriod(p.time)===period.id);
+        return `<div class="wardrobe-period"><h3>${period.title}</h3>${items.length?items.map(p=>`
+          <div class="wardrobe-itinerary-place"><span class="wardrobe-itinerary-time">${esc(p.time||'Chưa giờ')}</span>
+          <div><strong>${esc(p.name||'Địa điểm')}</strong><small>${esc(p.category||'Khác')}${p.address?' · '+esc(p.address):''}</small></div></div>`).join(''):'<p class="wardrobe-empty-places">Chưa có địa điểm</p>'}</div>`;
+    }).join('');
+}
+async function selectWardrobeDate(date) {
+    if (!wardrobeTripId || !wardrobeDates().includes(date)) return;
+    if (wardrobeMode==='edit' && wardrobeDate && wardrobeDate!==date && !confirm('Chuyển ngày? Các thay đổi chưa lưu sẽ mất.')) return;
+    wardrobeDate=date;
+    wardrobeOutfits=[];
+    $('wardrobeDays').innerHTML=wardrobeDates().map((d,i)=>`<button type="button" class="wardrobe-day ${d===date?'active':''}" data-wardrobe-day="${d}">Ngày ${i+1}<small style="display:block">${localDate(d)}</small></button>`).join('');
+    $('wardrobeDayTitle').textContent=`Ngày ${wardrobeDates().indexOf(date)+1} — ${localDate(date)}`;
+    renderWardrobeDayPlaces(date);
+    $('wardrobeOutfitSections').textContent='Đang tải...';
+    try {
+        await ensureFirebaseAuth();
+        const snap=await getDoc(doc(db,'wardrobes',wardrobeDocId(wardrobeTripId,date)));
+        if (wardrobeDate!==date) return;
+        const data=snap.exists()?snap.data():{};
+        if (Array.isArray(data.outfits)) {
+            wardrobeOutfits=data.outfits.map(o=>({id:String(o.id||uid()),name:String(o.name||''),period:WARDROBE_PERIODS.some(p=>p.id===o.period)?o.period:'morning',note:String(o.note||''),photos:Array.isArray(o.photos)?o.photos:[]}));
+        } else if (data.note || (Array.isArray(data.photos)&&data.photos.length)) {
+            // Preserve legacy single note/photos as the first outfit card.
+            wardrobeOutfits=[{id:uid(),name:'Outfit đã lưu',period:'morning',note:String(data.note||''),photos:Array.isArray(data.photos)?data.photos:[]}];
+        }
+    } catch(err) { console.error('Wardrobe load:',err);toast('Không tải được tủ đồ. Kiểm tra Firestore Rules.'); }
+    renderWardrobeOutfits();
+}
+function renderWardrobeOutfits() {
+    const host=$('wardrobeOutfitSections');
+    if(!host) return;
+    host.innerHTML=WARDROBE_PERIODS.map(period=>{
+        const outfits=wardrobeOutfits.filter(o=>o.period===period.id);
+        return `<div class="wardrobe-period wardrobe-drop-zone" data-outfit-drop="${period.id}"><h3>${period.title}</h3><div class="wardrobe-cards">${outfits.map(o=>`
+          <div class="outfit-card ${wardrobeMode==='edit'?'editable':''}" data-outfit-id="${esc(o.id)}" draggable="${wardrobeMode==='edit'}" tabindex="${wardrobeMode==='edit'?'0':'-1'}">
+          ${o.photos[0]?`<img src="${esc(o.photos[0])}" alt="Ảnh outfit">`:'<div class="outfit-placeholder">👗</div>'}
+          <div class="outfit-card-body"><strong>${esc(o.name||'Outfit')}</strong><p>${esc(o.note||'Chưa có ghi chú')}</p><small>📷 ${o.photos.length} ảnh${wardrobeMode==='edit'?' · Kéo để đổi buổi / Bấm để sửa':''}</small></div></div>`).join('')}</div>${!outfits.length?'<p class="wardrobe-empty-places">Chưa có outfit</p>':''}</div>`;
+    }).join('');
+}
+function openOutfitEditor(id=null) {
+    if(wardrobeMode!=='edit') return;
+    const item=wardrobeOutfits.find(o=>o.id===id);
+    editingOutfitId=item?.id||null;
+    $('outfitName').value=item?.name||'';
+    $('outfitPeriod').value=item?.period||'morning';
+    $('outfitNote').value=item?.note||'';
+    outfitDraftPhotos=[...(item?.photos||[])];
+    $('outfitImages').value='';
+    $('deleteOutfitBtn').classList.toggle('hidden',!item);
+    renderOutfitGallery();
+    $('outfitModal').classList.remove('hidden');
+}
+function closeOutfitEditor() { $('outfitModal').classList.add('hidden'); }
+function renderOutfitGallery() {
+    const host=$('outfitGallery');host.replaceChildren();
+    outfitDraftPhotos.forEach((src,i)=>{
+        const box=document.createElement('div');box.className='wardrobe-photo';
+        const img=document.createElement('img');img.src=src;img.alt=`Ảnh ${i+1}`;
+        const del=document.createElement('button');del.type='button';del.textContent='×';del.title='Xóa ảnh';
+        del.addEventListener('click',()=>{outfitDraftPhotos.splice(i,1);renderOutfitGallery();});
+        box.append(img,del);host.append(box);
+    });
+}
+function compressOutfit(file) {
+    return new Promise((resolve,reject)=>{
+        if(!file.type.startsWith('image/')) return reject(new Error('Chỉ hỗ trợ ảnh.'));
+        const img=new Image(),url=URL.createObjectURL(file);
+        img.onload=()=>{
+            URL.revokeObjectURL(url);
+            const ratio=Math.min(1,640/Math.max(img.width,img.height));
+            const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*ratio));canvas.height=Math.max(1,Math.round(img.height*ratio));
+            canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+            const result=canvas.toDataURL('image/jpeg',0.56);
+            result.length>180000?reject(new Error('Ảnh sau nén vẫn quá lớn.')):resolve(result);
+        };
+        img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Không đọc được ảnh.'));};
+        img.src=url;
+    });
+}
+async function addOutfitPhotos(e) {
+    const files=Array.from(e.target.files||[]);
+    if(outfitDraftPhotos.length+files.length>4){toast('Tối đa 4 ảnh cho mỗi thẻ.');e.target.value='';return;}
+    try {for(const file of files) outfitDraftPhotos.push(await compressOutfit(file));renderOutfitGallery();}
+    catch(err){alert(err.message);}e.target.value='';
+}
+function confirmOutfitEditor() {
+    const name=$('outfitName').value.trim()||'Outfit';
+    const item={id:editingOutfitId||uid(),name,period:$('outfitPeriod').value,note:$('outfitNote').value,photos:[...outfitDraftPhotos]};
+    const i=wardrobeOutfits.findIndex(o=>o.id===item.id);
+    if(i===-1)wardrobeOutfits.push(item);else wardrobeOutfits[i]=item;
+    closeOutfitEditor();renderWardrobeOutfits();
+}
+async function saveWardrobeDay() {
+    if(wardrobeBusy||!wardrobeTripId||!wardrobeDate)return;
+    wardrobeBusy=true;$('saveWardrobeBtn').disabled=true;
+    try {
+        await ensureFirebaseAuth();
+        await setDoc(doc(db,'wardrobes',wardrobeDocId(wardrobeTripId,wardrobeDate)),{
+            tripId:wardrobeTripId,date:wardrobeDate,outfits:wardrobeOutfits,updatedAt:serverTimestamp()
+        });
+        toast('Đã lưu tủ đồ lên Firebase ✓');setWardrobeMode('view');
+    } catch(err){console.error('Wardrobe save:',err);alert('Không lưu được tủ đồ. Kiểm tra Rules hoặc kích thước ảnh (Firestore tối đa 1 MiB/tài liệu).');}
+    finally{wardrobeBusy=false;$('saveWardrobeBtn').disabled=false;}
+}
+function bindWardrobeEvents() {
+    $('wardrobeBtn')?.addEventListener('click',openWardrobe);
+    $('closeWardrobeBtn')?.addEventListener('click',closeWardrobe);
+    $('wardrobeModeBtn')?.addEventListener('click',()=>{
+        if(wardrobeMode==='edit'&&!confirm('Chuyển sang chế độ xem? Hãy lưu trước nếu muốn giữ thay đổi.'))return;
+        if(wardrobeMode==='edit')selectWardrobeDate(wardrobeDate);
+        setWardrobeMode(wardrobeMode==='view'?'edit':'view');
+    });
+    $('wardrobeDays')?.addEventListener('click',e=>{const b=e.target.closest('[data-wardrobe-day]');if(b)selectWardrobeDate(b.dataset.wardrobeDay);});
+    $('addOutfitBtn')?.addEventListener('click',()=>openOutfitEditor());
+    $('closeOutfitBtn')?.addEventListener('click',closeOutfitEditor);
+    $('outfitImages')?.addEventListener('change',addOutfitPhotos);
+    $('confirmOutfitBtn')?.addEventListener('click',confirmOutfitEditor);
+    $('deleteOutfitBtn')?.addEventListener('click',()=>{
+        if(!editingOutfitId||!confirm('Xóa thẻ outfit này?'))return;
+        wardrobeOutfits=wardrobeOutfits.filter(o=>o.id!==editingOutfitId);closeOutfitEditor();renderWardrobeOutfits();
+    });
+    $('saveWardrobeBtn')?.addEventListener('click',saveWardrobeDay);
+    $('wardrobeOutfitSections')?.addEventListener('click',e=>{const card=e.target.closest('[data-outfit-id]');if(card&&wardrobeMode==='edit')openOutfitEditor(card.dataset.outfitId);});
+    $('wardrobeOutfitSections')?.addEventListener('keydown',e=>{if(e.key==='Enter'){const card=e.target.closest('[data-outfit-id]');if(card&&wardrobeMode==='edit')openOutfitEditor(card.dataset.outfitId);}});
+    $('wardrobeOutfitSections')?.addEventListener('dragstart',e=>{
+        const card=e.target.closest('[data-outfit-id]');if(!card||wardrobeMode!=='edit')return;
+        e.dataTransfer.setData('text/plain',card.dataset.outfitId);e.dataTransfer.effectAllowed='move';
+    });
+    $('wardrobeOutfitSections')?.addEventListener('dragover',e=>{if(wardrobeMode==='edit'&&e.target.closest('[data-outfit-drop]'))e.preventDefault();});
+    $('wardrobeOutfitSections')?.addEventListener('drop',e=>{
+        const zone=e.target.closest('[data-outfit-drop]');if(!zone||wardrobeMode!=='edit')return;e.preventDefault();
+        const id=e.dataTransfer.getData('text/plain'),item=wardrobeOutfits.find(o=>o.id===id);
+        if(item){item.period=zone.dataset.outfitDrop;renderWardrobeOutfits();}
+    });
+    $('outfitModal')?.addEventListener('click',e=>{if(e.target.id==='outfitModal')closeOutfitEditor();});
+}
+
 /* =========================================================
    START APP
 ========================================================= */
@@ -2497,6 +2689,8 @@ async function init() {
     state.places = (state.places || []).filter(place => place.date);
 
     bindStaticEvents();
+    bindWardrobeEvents();
+    if(currentTripId) $('wardrobeBtn')?.classList.remove('hidden');
     setInterval(updateTripCountdown, 60000);
     $('excelBtn')?.addEventListener('click', exportExcel);
     $('pdfBtn')?.addEventListener('click', exportPDF);

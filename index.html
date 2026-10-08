@@ -32,6 +32,7 @@
 <button class="btn primary" id="newTripBtn">
     ＋ Chuyến mới
 </button>
+      <button class="btn secondary hidden" id="wardrobeBtn" type="button">👗 Tủ đồ</button>
       <button class="btn outline" id="excelBtn">Xuất Excel</button>
       <button class="btn primary" id="pdfBtn">Xuất PDF</button>
     </div>
@@ -336,6 +337,42 @@
     </div>
   </div>
 
+  <!-- Full-screen wardrobe view, separate from the itinerary (not a popup) -->
+  <section id="wardrobePage" class="wardrobe-page hidden" aria-label="Tủ đồ chuyến đi">
+    <div class="wardrobe-page-inner">
+      <div class="wardrobe-page-head">
+        <div><span class="mini-label">MY TRIP WARDROBE</span><h1 id="wardrobeTitle">👗 Tủ đồ</h1><p class="hint">Chọn outfit theo lịch trình mỗi ngày. Địa điểm chỉ để xem, không thể chỉnh sửa ở đây.</p></div>
+        <div class="wardrobe-page-actions"><button type="button" class="btn outline" id="closeWardrobeBtn">← Về lịch trình</button><button type="button" class="btn secondary" id="wardrobeModeBtn">✏️ Chỉnh sửa</button></div>
+      </div>
+      <div id="wardrobeDays" class="wardrobe-days"></div>
+      <h2 id="wardrobeDayTitle"></h2>
+      <div class="wardrobe-layout">
+        <section class="wardrobe-readonly card">
+          <div class="wardrobe-itinerary-head"><strong>📍 Lịch trình ngày này (chỉ xem)</strong><span id="wardrobePlaceCount"></span></div>
+          <div id="wardrobeDayPlaces" class="wardrobe-periods"></div>
+        </section>
+        <section class="wardrobe-closet card">
+          <div class="wardrobe-itinerary-head"><strong>👗 Các thẻ outfit</strong><span id="wardrobeModeLabel">Chế độ xem</span></div>
+          <p class="hint wardrobe-edit-only hidden">Kéo thẻ outfit giữa Sáng / Chiều / Tối. Nhấn vào thẻ để chỉnh sửa.</p>
+          <button type="button" class="btn primary wardrobe-edit-only hidden" id="addOutfitBtn">＋ Thêm thẻ outfit</button>
+          <div id="wardrobeOutfitSections" class="wardrobe-periods"></div>
+          <div class="modal-actions wardrobe-edit-only hidden"><button type="button" class="btn primary" id="saveWardrobeBtn">💾 Lưu tủ đồ</button></div>
+        </section>
+      </div>
+    </div>
+  </section>
+  <div class="modal hidden" id="outfitModal" role="dialog" aria-modal="true" aria-label="Chỉnh sửa outfit">
+    <div class="modal-panel">
+      <button type="button" class="modal-close" id="closeOutfitBtn">×</button>
+      <span class="mini-label">OUTFIT CARD</span><h2>👗 Thẻ outfit</h2>
+      <label>Tên outfit<input id="outfitName" maxlength="90" placeholder="Ví dụ: Váy hoa + cardigan"></label>
+      <label>Buổi<select id="outfitPeriod"><option value="morning">🌅 Sáng</option><option value="afternoon">🌤️ Chiều</option><option value="evening">🌙 Tối</option></select></label>
+      <label>Ghi chú<textarea id="outfitNote" rows="4" placeholder="Quần áo, giày, phụ kiện..."></textarea></label>
+      <label>Ảnh outfit (tối đa 4 ảnh/thẻ)<input id="outfitImages" type="file" accept="image/*" multiple></label>
+      <div id="outfitGallery" class="wardrobe-gallery"></div>
+      <div class="modal-actions"><button type="button" class="btn secondary" id="deleteOutfitBtn">Xóa thẻ</button><button type="button" class="btn primary" id="confirmOutfitBtn">Lưu thẻ</button></div>
+    </div>
+  </div>
   <div class="toast" id="toast"></div>
 
   <script type="module" src="javascript/script.js"></script>
