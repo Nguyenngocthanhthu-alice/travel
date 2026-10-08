@@ -4614,3 +4614,15 @@ a.map-link:hover {
 .cut-item b { color: var(--green-800); white-space: nowrap; }
 .cut-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 16px; padding: 14px; border-radius: 13px; background: var(--green-100); color: var(--green-800); }
 .budget-stats { flex-wrap: wrap; }
+
+/* Four time-of-day sections inside each itinerary day */
+.day-periods { padding: 10px; display: flex; flex-direction: column; gap: 12px; }
+.day-period { border: 1px solid #e2eae4; border-radius: 14px; overflow: hidden; background: #fff; }
+.day-period-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: #eef5ef; color: #2c5951; font-size: 12px; }
+.day-period-head span { font-size: 10px; color: #597355; white-space: nowrap; }
+.day-period:nth-child(2) .day-period-head { background: #fff3e9; }
+.day-period:nth-child(3) .day-period-head { background: #fcebf1; }
+.day-period:nth-child(4) .day-period-head { background: #e8eef2; }
+.day-drop.period-drop { min-height: 85px; margin: 4px; padding: 8px; }
+.period-empty { padding: 18px 5px; text-align: center; font-size: 12px; color: #8b9b91; border: 1px dashed #d9e4dc; border-radius: 10px; }
+.day-drop.period-drop.drag-over { background: #e5f7ec; border-color: #54bf98; }

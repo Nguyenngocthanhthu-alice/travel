@@ -882,6 +882,21 @@ function renderPlaceFilters(availablePlaces = []) {
     `).join('');
 }
 
+const DAY_PERIODS = [
+    { id: 'morning', title: '🌅 Buổi sáng', hours: '05:00–10:59', start: '05:00', end: '10:59', suggested: '08:00' },
+    { id: 'noon', title: '☀️ Buổi trưa', hours: '11:00–13:59', start: '11:00', end: '13:59', suggested: '12:00' },
+    { id: 'afternoon', title: '🌤️ Buổi chiều', hours: '14:00–17:59', start: '14:00', end: '17:59', suggested: '15:00' },
+    { id: 'evening', title: '🌙 Buổi tối', hours: '18:00–04:59', start: '18:00', end: '04:59', suggested: '19:00' }
+];
+
+function dayPeriodIdForTime(time) {
+    if (!time) return 'morning';
+    if (time >= '05:00' && time < '11:00') return 'morning';
+    if (time >= '11:00' && time < '14:00') return 'noon';
+    if (time >= '14:00' && time < '18:00') return 'afternoon';
+    return 'evening';
+}
+
 function render() {
     normalizeState();
 
@@ -940,12 +955,16 @@ function render() {
                         <h3>${localDate(date)}</h3>
                     </div>
 
-                    <div class="day-drop" data-date="${date}">
-                        ${
-                            items.length
-                                ? items.map(placeCard).join('')
-                                : `<div class="empty-day">Kéo địa điểm vào đây<br>rồi chọn thời gian</div>`
-                        }
+                    <div class="day-periods">
+                        ${DAY_PERIODS.map(period => {
+                            const periodItems = items.filter(place => dayPeriodIdForTime(place.time) === period.id);
+                            return `<section class="day-period">
+                                <div class="day-period-head"><strong>${period.title}</strong><span>${period.hours}</span></div>
+                                <div class="day-drop period-drop" data-date="${date}" data-period="${period.id}">
+                                    ${periodItems.length ? periodItems.map(placeCard).join('') : '<div class="period-empty">＋ Kéo địa điểm vào đây</div>'}
+                                </div>
+                            </section>`;
+                        }).join('')}
                     </div>
 
                     <div class="day-total">
@@ -1179,10 +1198,13 @@ function bindDrag() {
                 return;
             }
 
-            pendingDrop = { id, date };
+            pendingDrop = { id, date, period: zone.dataset.period || null };
 
             if ($('timePlaceName')) $('timePlaceName').textContent = place.name || '';
-            if ($('scheduleTime')) $('scheduleTime').value = place.time || '09:00';
+            if ($('scheduleTime')) {
+                const period = DAY_PERIODS.find(item => item.id === pendingDrop.period);
+                $('scheduleTime').value = period && (!place.time || dayPeriodIdForTime(place.time) !== period.id) ? period.suggested : (place.time || '09:00');
+            }
             if ($('timeModal')) $('timeModal').classList.remove('hidden');
         });
     });
