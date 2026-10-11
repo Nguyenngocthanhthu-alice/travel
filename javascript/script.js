@@ -2705,8 +2705,105 @@ async function saveWardrobeDay() {
     }
 }
 
+
+/* =========================================================
+   EXPORT WARDROBE PDF — one A4 page per day.
+   Left: place names. Right: matching period outfit photos.
+   All days are loaded from Firestore (not just the open day).
+========================================================= */
+async function exportWardrobePDF() {
+    if (!wardrobeTripId) { toast('Hãy mở một chuyến đi đã lưu.'); return; }
+    if (wardrobeMode === 'edit' && !confirm('PDF lấy dữ liệu đã lưu. Hãy lưu các thay đổi outfit trước khi xuất. Tiếp tục?')) return;
+    const button = $('wardrobePdfBtn');
+    const originalLabel = button?.textContent || '📄 Xuất PDF tủ đồ';
+    if (button) { button.disabled = true; button.textContent = 'Đang tạo PDF...'; }
+    let host;
+    try {
+        const jsPDF = window.jspdf?.jsPDF;
+        if (!jsPDF || !window.html2canvas) throw new Error('Thiếu thư viện PDF hoặc html2canvas.');
+        await ensureFirebaseAuth();
+        const days = wardrobeDates();
+        if (!days.length) throw new Error('Chuyến đi chưa có ngày hợp lệ.');
+        const records = await Promise.all(days.map(async date => {
+            const snap = await getDoc(doc(db, 'wardrobes', wardrobeDocId(wardrobeTripId, date)));
+            const data = snap.exists() ? snap.data() : {};
+            let outfits = Array.isArray(data.outfits) ? data.outfits : [];
+            if (!Array.isArray(data.outfits) && (data.note || (Array.isArray(data.photos) && data.photos.length))) {
+                outfits = [{period:'morning',photos:Array.isArray(data.photos)?data.photos:[]}];
+            }
+            return {date, outfits};
+        }));
+        const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+        host = document.createElement('div');
+        host.style.cssText = 'position:fixed;left:-12000px;top:0;width:780px;z-index:-1;pointer-events:none;background:#fff;';
+        document.body.appendChild(host);
+        for (let i=0; i<records.length; i++) {
+            const {date,outfits} = records[i];
+            const places = (state.places || []).filter(p => p.date === date)
+                .sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+            const sections = WARDROBE_PERIODS.map(period => {
+                const names = places.filter(p => wardrobePeriod(p.time) === period.id);
+                const photos = outfits.filter(o => o.period === period.id)
+                    .flatMap(o => Array.isArray(o.photos) ? o.photos : [])
+                    .filter(src => typeof src === 'string' && /^(data:image\/|https:\/\/)/i.test(src));
+                const left = names.length ? names.map(p => `<div style="padding:8px 0;border-bottom:1px solid #e8eeeb;font-size:18px;line-height:1.45;font-weight:700;overflow-wrap:anywhere">${esc(p.name||'Địa điểm')}</div>`).join('') : '<div style="color:#87938b;font-size:16px">Chưa có địa điểm</div>';
+                const right = photos.length ? photos.map(src => `<img src="${esc(src)}" style="max-width:145px;max-height:158px;width:auto;height:auto;background:#fff;border:1px solid #e9e9e9;border-radius:10px;display:block;object-fit:contain" alt="Outfit">`).join('') : '<div style="color:#87938b;font-size:16px">Chưa có ảnh outfit</div>';
+                return `<section style="border:1px solid #dfe8e2;border-radius:16px;margin:16px 0;overflow:hidden;break-inside:avoid">
+                    <div style="background:#eaf4ed;color:#2c5951;padding:13px 17px;font-size:21px;font-weight:900">${period.title}</div>
+                    <div style="display:grid;grid-template-columns:43% 57%;min-height:175px">
+                        <div style="padding:15px 18px;border-right:1px solid #e6ebe8"><div style="font-size:12px;color:#718078;font-weight:900;margin-bottom:8px">ĐỊA ĐIỂM</div>${left}</div>
+                        <div style="padding:15px 16px"><div style="font-size:12px;color:#718078;font-weight:900;margin-bottom:8px">OUTFIT</div><div style="display:flex;flex-wrap:wrap;gap:9px;align-items:flex-start">${right}</div></div>
+                    </div></section>`;
+            }).join('');
+            host.innerHTML = `<div style="width:780px;padding:32px 34px 26px;background:#fff;color:#263833;font-family:Nunito,Arial,sans-serif;box-sizing:border-box">
+                <div style="font-size:13px;color:#bf5079;letter-spacing:2px;font-weight:900">TRIP WARDROBE</div>
+                <div style="font-size:29px;font-weight:900;color:#2c5951;margin:7px 0;overflow-wrap:anywhere">${esc(state.trip.name||'Chuyến đi')}</div>
+                <div style="font-size:19px;font-weight:800;margin-bottom:19px">Ngày ${i+1} — ${esc(localDate(date))}</div>
+                ${sections}
+                <div style="text-align:right;font-size:12px;color:#87938b;margin-top:16px">${i+1} / ${days.length}</div>
+            </div>`;
+            await Promise.all([...host.querySelectorAll('img')].map(img => new Promise(resolve => {
+                if (img.complete) return resolve();
+                img.onload = resolve; img.onerror = resolve;
+            })));
+            // Set actual dimensions from each photo's intrinsic aspect ratio.
+            // This avoids html2canvas stretching portrait/landscape images into fixed boxes.
+            host.querySelectorAll('img').forEach(img => {
+                const naturalW = img.naturalWidth;
+                const naturalH = img.naturalHeight;
+                if (!naturalW || !naturalH) return;
+                const scale = Math.min(145 / naturalW, 158 / naturalH, 1);
+                img.style.width = `${Math.max(1, Math.round(naturalW * scale))}px`;
+                img.style.height = `${Math.max(1, Math.round(naturalH * scale))}px`;
+                img.style.maxWidth = 'none';
+                img.style.maxHeight = 'none';
+                img.style.flex = '0 0 auto';
+            });
+            if (document.fonts?.ready) await document.fonts.ready;
+            const sheet = host.firstElementChild;
+            const canvas = await html2canvas(sheet, {scale:1.7,backgroundColor:'#ffffff',useCORS:true,logging:false,
+                width:sheet.scrollWidth,height:sheet.scrollHeight,windowWidth:900});
+            const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight(), margin = 8;
+            const factor = Math.min((w-2*margin)/canvas.width,(h-2*margin)/canvas.height);
+            const drawW = canvas.width*factor, drawH=canvas.height*factor;
+            if (i) pdf.addPage();
+            pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',(w-drawW)/2,(h-drawH)/2,drawW,drawH,undefined,'FAST');
+        }
+        const filename = (state.trip.name || 'Trip').replace(/[^\wÀ-ỹ -]/g,'').trim() || 'Trip';
+        pdf.save(`${filename}-wardrobe.pdf`);
+        toast('Đã xuất PDF tủ đồ ✓');
+    } catch(error) {
+        console.error('Wardrobe PDF export failed:',error);
+        alert(`Không xuất được PDF tủ đồ: ${error.message || error}`);
+    } finally {
+        host?.remove();
+        if (button) {button.disabled=false;button.textContent=originalLabel;}
+    }
+}
+
 function bindWardrobeEvents() {
     $('wardrobeBtn')?.addEventListener('click',openWardrobe);
+    $('wardrobePdfBtn')?.addEventListener('click',exportWardrobePDF);
     $('closeWardrobeBtn')?.addEventListener('click',closeWardrobe);
     $('wardrobeModeBtn')?.addEventListener('click',()=>{
         if(wardrobeMode==='edit'&&!confirm('Chuyển sang chế độ xem? Hãy lưu trước nếu muốn giữ thay đổi.'))return;
