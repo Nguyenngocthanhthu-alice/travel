@@ -4699,3 +4699,265 @@ a.map-link:hover {
 .wardrobe-day-places{max-height:none;overflow:visible}
 #outfitModal label{margin-top:12px}
 @media(max-width:800px){.wardrobe-layout{grid-template-columns:1fr}.wardrobe-page{padding:18px 12px 50px}}
+
+
+/* ============================================================
+   ALICE'S COQUETTE STORYBOOK THEME — visual overrides only
+   Existing IDs, application logic, and interactions are intact.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+:root{--pink-50:#fff6f8;--pink-100:#F7CAD4;--pink-200:#F2A7B8;--pink-500:#b94d77;--green-100:#e3f0e8;--green-400:#8BBB9E;--green-500:#3E8E5E;--green-800:#326849;--green-muted:#568a68;--tan:#c4a46a;--ink:#365742;--muted:#6c7e70;--white:#fffdf9;--border:#e8d8c7;--shadow:0 12px 28px rgba(78,99,71,.11),0 2px 0 rgba(196,164,106,.14)}
+html{background:#f8f1e9}
+body{font-family:'DM Sans',sans-serif;background:repeating-linear-gradient(90deg,#f9e3e9 0,#f9e3e9 32px,#fdf7f1 32px,#fdf7f1 57px,#e2eee5 57px,#e2eee5 89px,#fdf7f1 89px,#fdf7f1 114px);color:var(--ink);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:rgba(255,253,249,.35);z-index:0}
+.topbar,main{position:relative;z-index:1}
+h1,h2,h3,.place-name{font-family:'Playfair Display',Georgia,serif;letter-spacing:.01em}
+.topbar{position:relative;margin:18px clamp(12px,3vw,48px) 0;padding:45px clamp(22px,4vw,55px) 30px;border:3px double #c5a86f;border-radius:30px 30px 18px 18px;background:#f9e6e9;box-shadow:0 7px 0 #e1ecdf,0 12px 25px #56715c21;flex-wrap:wrap}
+.topbar::before{content:'';position:absolute;inset:9px;border:1px dashed #c4a46a;border-radius:22px;pointer-events:none}
+.topbar::after{content:'🎀';position:absolute;top:-26px;left:50%;transform:translateX(-50%);font-size:45px;filter:drop-shadow(0 4px 3px #9c617633)}
+.topbar h1{font-size:clamp(30px,4.2vw,56px);color:#39734e;text-shadow:2px 2px 0 #fffaf3;margin:0 0 7px}
+.topbar .subtitle{color:#95566f;font-style:italic;font-size:14px}
+.header-ornament{position:absolute;top:11px;left:36px;color:#bd7c94;font-size:14px;letter-spacing:8px}
+.eyebrow,.mini-label{color:#b45979;letter-spacing:.15em}
+main{max-width:1650px;margin:18px auto 0;padding:12px clamp(18px,4vw,58px) 55px;background:#fffaf3e8;border-left:2px solid #e1cfa9;border-right:2px solid #e1cfa9;box-shadow:0 0 35px #425b4020}
+.storybook-divider{text-align:center;color:#bb7890;letter-spacing:5px;font-size:20px;margin:6px auto 20px}.footer-divider{margin:30px auto 0;font-size:15px}
+.card,.day-column,.modal-panel,.wardrobe-period{position:relative;background:#fffdf9;border:2px solid #d9c5a0;border-radius:20px;box-shadow:var(--shadow)}
+.card::before,.day-column::before,.modal-panel::before{content:'';position:absolute;inset:6px;border:1px solid #efdcc7;border-radius:14px;pointer-events:none;z-index:0}
+.card>*,.modal-panel>*{position:relative;z-index:1}
+.trip-setup{background:#fff5f5;padding:28px}
+.trip-setup::after{content:'🌷';position:absolute;right:22px;top:-20px;font-size:36px;transform:rotate(15deg);pointer-events:none}
+.trip-badge,.count,.countdown-status,.budget-status{border:1px solid #d9bb83;background:#e2eee5;color:#386b4b}
+.btn{border-radius:999px;border:1px solid #d5b98c;box-shadow:0 3px 0 #c5a88b66;transition:transform .2s,box-shadow .2s,background .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 5px 0 #c5a88b66}
+.btn:active{transform:translateY(1px);box-shadow:0 1px 0 #c5a88b66}
+.btn.primary,.primary{background:#3E8E5E;color:#fff}
+.btn.secondary,.secondary{background:#F7CAD4;color:#75495b}
+.btn.outline,.outline{background:#fffaf3;color:#386b4b;border:1px solid #8BBB9E}
+.add-place{background:#b94d77!important;color:#fff!important}
+input,select,textarea{background:#fffdf9;border:1px solid #d9c8ae;border-radius:12px}
+input:focus,select:focus,textarea:focus{border-color:#3E8E5E;box-shadow:0 0 0 3px #8BBB9E55}
+.unscheduled{background:#f5faf3}.unscheduled::after{content:'🦋';position:absolute;right:18px;top:-23px;font-size:33px;pointer-events:none}
+.days-toolbar{padding:10px 8px 17px}
+.day-column{overflow:hidden;background:#fffaf6;border-radius:20px}
+.day-head{position:relative;background:#dcebe2;color:#326849;border-bottom:2px solid #c4a46a;text-align:center;padding:22px 16px 19px}
+.day-head::before{content:'✦ ♡ ✦';display:block;color:#b94d77;letter-spacing:7px;font-size:13px;margin-bottom:6px}
+.day-head .day-no{color:#a35474;opacity:1}.day-head h3{color:#326849}
+.day-total{background:#f8e9ec;border-top:1px dashed #c4a46a}
+.place-card{border:1px solid #e2c7ce;border-left:5px solid #b94d77;background:#fffdf9;border-radius:14px;box-shadow:0 4px 10px #85596c12}
+.place-card:hover{box-shadow:0 6px 16px #85596c24}
+.place-name{font-size:16px}.category{color:#b94d77}
+.summary,.budget-card,.trip-countdown{background:#fef8f2}
+.summary-stats div,.budget-stats>div,.countdown-numbers>div{background:#fcecf0;border:1px solid #e8c5cd;border-radius:15px}
+.modal{background:#253b32a8;backdrop-filter:blur(4px)}
+.modal-panel{background:#fffaf5;border:3px double #c4a46a}
+.modal-panel h2::before{content:'✧ ';color:#b94d77}
+.wardrobe-page{background:repeating-linear-gradient(90deg,#f9e3e9 0 36px,#fffaf4 36px 70px,#e2eee5 70px 106px,#fffaf4 106px 140px)}
+.wardrobe-page-inner{background:#fffaf4ef;border:2px solid #d9c5a0;border-radius:24px;padding:25px}
+.wardrobe-period{background:#fff8f7}
+.floating-decor{position:fixed;z-index:3;top:20%;display:flex;flex-direction:column;gap:65px;pointer-events:none;font-size:clamp(24px,3vw,40px);filter:drop-shadow(0 4px 3px #7c6a5630)}
+.floating-decor span:nth-child(odd){transform:rotate(-17deg)}.floating-decor span:nth-child(even){transform:rotate(15deg)}
+.decor-left{left:5px}.decor-right{right:5px}
+@media(min-width:1600px){.decor-left{left:calc((100vw - 1690px)/4)}.decor-right{right:calc((100vw - 1690px)/4)}}
+@media(max-width:1100px){.floating-decor{display:none}.topbar{margin:12px 12px 0}.header-ornament{display:none}}
+@media(max-width:700px){.topbar{padding:40px 20px 23px;border-radius:22px}.topbar h1{font-size:31px}.topbar::after{font-size:35px;top:-21px}main{margin-top:12px;padding:10px 12px 35px}.storybook-divider{font-size:14px;letter-spacing:2px}.trip-setup{padding:20px 15px}.day-column{flex-basis:min(330px,87vw)}.wardrobe-page-inner{padding:12px}.card::before,.modal-panel::before{inset:4px}}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}}
+
+/* ===== ALICE VINTAGE COQUETTE V2: UX + RESPONSIVE ===== */
+:root{--pink-50:#fff6f8;--pink-100:#F7CAD4;--pink-200:#F2A7B8;--green-100:#DCF0DF;--green-500:#3E8E5E;--green-800:#326849;--tan:#e5c178}
+body,button,input,select,textarea{font-family:'Be Vietnam Pro',Arial,sans-serif!important}
+h1,h2,h3,.place-name{font-family:'Quicksand','Be Vietnam Pro',sans-serif!important;letter-spacing:0!important;font-weight:700}
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:55px clamp(25px,4vw,65px) 36px;background:repeating-linear-gradient(90deg,#fae1e8 0 40px,#fff2f2 40px 77px,#e4f0e3 77px 114px,#fff4f0 114px 151px);border:4px double #dba2b3;border-radius:28px;isolation:isolate}
+.topbar::before{background:#fff9f7dc;inset:12px;border:1px solid #d9a1b5;border-radius:18px;z-index:-1}
+.topbar::after{content:'🎀';font-size:47px}
+.topbar h1{font-size:clamp(30px,3.4vw,52px);line-height:1.16}
+.topbar .subtitle{font-family:Georgia,serif;font-size:16px}
+.header-controls{display:flex;align-items:center;justify-content:flex-end;min-width:0}
+.header-actions{display:flex;flex-direction:column;align-items:flex-end;gap:13px}
+.action-group{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.action-group-extra{padding-top:11px;border-top:1px dashed #d7a4b5}
+.header-actions .btn{min-height:42px;padding:10px 15px;white-space:nowrap;font-size:12px}
+.action-group-main .btn{font-weight:800}
+.action-group-main #saveTripBtn{background:#3E8E5E;color:#fff}
+.action-group-extra .btn{background:#fff9f7;color:#497157;border-color:#e5bac6}
+.mobile-menu-toggle{display:none;border:1px solid #c98ba1;border-radius:100px;padding:12px 18px;background:#fff5f7;color:#8d4263;font-weight:800}
+.card,.day-column,.modal-panel{border:2px solid #e4b9c6;box-shadow:0 7px 0 #f5dfe4,0 15px 30px #46604c17}
+.card::before,.day-column::before,.modal-panel::before{border:1px dashed #dbb68a}
+.section-title h2,.sidebar-head h2,.days-toolbar h2,.budget-head h2,.countdown-heading h2{font-size:clamp(20px,2vw,28px)}
+.trip-setup{background:#fff8f7}
+.trip-countdown{background:#f5fbf3}
+.budget-card{background:#fff9f2}
+.day-head{background:#e5f1e3}
+.day-column:nth-child(even) .day-head{background:#fae4eb}
+.modal-panel{padding:32px 30px 28px}
+.modal-close{position:absolute!important;top:16px!important;right:18px!important;left:auto!important;width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#fae7ec!important;color:#994f6b!important;z-index:8!important}
+.trips-panel{width:min(950px,96vw)}
+.saved-trips-list{gap:16px}
+.btn:focus-visible,.mobile-menu-toggle:focus-visible{outline:3px solid #3E8E5E;outline-offset:3px}
+@media(max-width:1250px){.topbar{grid-template-columns:1fr}.header-controls{justify-content:flex-start}.header-actions{align-items:flex-start}.action-group{justify-content:flex-start}}
+@media(max-width:700px){
+  .topbar{margin:8px 8px 0;padding:37px 18px 17px;gap:13px}
+  .topbar h1{font-size:clamp(25px,7vw,35px)}
+  .topbar .subtitle{font-size:13px}
+  .header-controls{display:block;width:100%}
+  .mobile-menu-toggle{display:flex;gap:9px;align-items:center;justify-content:center;width:100%;min-height:44px}
+  .header-actions{display:none;width:100%;padding:14px 0 0;align-items:stretch}
+  .header-actions.mobile-open{display:flex}
+  .action-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}
+  .header-actions .btn{width:100%;white-space:normal;min-height:45px;font-size:12px;padding:9px 8px}
+  .action-group-main #saveTripBtn{grid-column:auto}
+  .setup-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .setup-grid label:first-child,.setup-grid .create-trip{grid-column:1/-1}
+  .trip-setup,.budget-card,.trip-countdown,.summary{padding:20px 15px}
+  .planner-shell{grid-template-columns:1fr!important}
+  .unscheduled{position:static;min-height:0}
+  .modal{padding:12px}
+  .modal-panel{padding:27px 18px 20px;max-height:calc(100dvh - 24px)}
+  .trips-panel{width:100%}
+  .saved-trips-list{grid-template-columns:1fr!important}
+  .floating-decor,.storybook-divider{display:none}
+}
+@media(max-width:390px){.setup-grid{grid-template-columns:1fr!important}.setup-grid label{grid-column:1/-1}}
+
+/* V3 — theatrical pastel curtains, no floating emoji */
+.floating-decor,.header-ornament{display:none!important}
+.topbar::after,.trip-setup::after,.unscheduled::after{content:none!important}
+.theatre-curtain{position:absolute;top:0;left:0;right:0;height:240px;z-index:4;pointer-events:none;overflow:hidden}
+.curtain-valance{height:100px;background:radial-gradient(ellipse 100px 70px at 50% 0,#f3a5bc 66%,#c76a8c 68%,transparent 72%) 0 0/200px 100px repeat-x;filter:drop-shadow(0 5px 2px #a84e722b)}
+.curtain-valance::after{content:'';display:block;position:absolute;top:0;left:0;right:0;height:18px;background:repeating-linear-gradient(90deg,#e78da9 0 22px,#f9c7d7 22px 44px);border-bottom:3px solid #d98a9c}
+.curtain-side{position:absolute;top:0;width:clamp(35px,6vw,100px);height:230px;background:repeating-linear-gradient(90deg,#8bbb9e 0 12px,#dcefdc 12px 24px,#a5cdb0 24px 36px);border:2px solid #7ba88b;box-shadow:inset -9px 0 18px #497b5a26;clip-path:polygon(0 0,100% 0,95% 72%,65% 100%,0 92%)}
+.curtain-left{left:0}.curtain-right{right:0;transform:scaleX(-1)}
+.topbar{margin-top:65px}
+@media(max-width:700px){.theatre-curtain{height:115px}.curtain-valance{height:60px;background-size:110px 60px}.curtain-side{height:110px;width:30px}.topbar{margin-top:42px}}
+
+/* V4: illustrated rococo fabric, not geometric CSS curtains */
+.theatre-curtain {
+  position:absolute!important;inset:0 0 auto!important;
+  width:100%;height:clamp(230px,33vw,530px)!important;
+  background:url('../images/rococo-curtains.png') center top / 100% 100% no-repeat!important;
+  overflow:visible!important;pointer-events:none!important;z-index:5!important;
+}
+.curtain-valance,.curtain-side{display:none!important}
+.topbar{margin-top:clamp(95px,12vw,185px)!important;z-index:2!important;background:#fff8f4f2!important;}
+.topbar::before{background:#fff9f7d9!important}
+body{background:repeating-linear-gradient(90deg,#fff5f6 0 46px,#fce4eb 46px 76px,#f2f8ed 76px 119px,#e8f3e5 119px 145px)!important}
+@media(max-width:900px){
+ .theatre-curtain{height:clamp(140px,26vw,245px)!important;background-size:100% 100%!important}
+ .topbar{margin-top:clamp(70px,12vw,110px)!important}
+}
+@media(max-width:600px){
+ .theatre-curtain{height:120px!important;background-size:auto 120px!important;background-position:center top!important}
+ .topbar{margin-top:76px!important;padding-top:24px!important}
+ .header-actions:not(.mobile-open){display:none!important}
+}
+
+
+/* V5 — fixed full-height curtain frame; compact safe-area content */
+:root { --curtain-gutter: clamp(65px, 7vw, 125px); }
+.theatre-curtain {
+  position: fixed !important; inset: 0 !important; width: 100vw !important;
+  height: 100dvh !important; z-index: 50 !important;
+  background: none !important; overflow: hidden !important; pointer-events: none !important;
+}
+.curtain-top-art {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: clamp(115px, 11vw, 185px);
+  background: url('../images/curtain-top.png') center top / 100% 100% no-repeat;
+}
+.curtain-left-art,.curtain-right-art {
+  position: absolute; top: 0; bottom: 0; width: var(--curtain-gutter);
+  background-size: 100% 100%; background-repeat: no-repeat;
+}
+.curtain-left-art {left:0;background-image:url('../images/curtain-left.png')}
+.curtain-right-art {right:0;background-image:url('../images/curtain-right.png')}
+body { overflow-x: hidden; }
+.topbar {
+  margin: clamp(140px, 12vw, 195px) calc(var(--curtain-gutter) + 8px) 0 !important;
+  padding: 22px clamp(18px, 2.2vw, 34px) !important;
+  grid-template-columns: minmax(0,1fr) auto !important;
+  gap: 16px !important;
+}
+.topbar h1 {font-size:clamp(26px,3vw,46px)!important;}
+.topbar .subtitle {margin-bottom:0;}
+main {max-width:none !important; margin:0 calc(var(--curtain-gutter) + 8px) !important; padding: 18px 0 48px !important;}
+.header-actions .btn {padding:9px 12px!important;font-size:12px!important;}
+.setup-grid {gap:10px!important;}
+.trip-setup,.budget-card,.trip-countdown,.summary {padding:18px!important;}
+@media(max-width:1200px){
+ .topbar {grid-template-columns:1fr!important;}
+ .header-controls {justify-self:start;}
+}
+@media(max-width:700px){
+ :root {--curtain-gutter:0px;}
+ .curtain-left-art,.curtain-right-art {display:none!important;}
+ .curtain-top-art {height:72px;background-size:auto 72px;}
+ .topbar {margin:76px 10px 0!important;padding:17px 15px!important;}
+ main {margin:0 10px!important;padding:12px 0 30px!important;}
+ .topbar h1 {font-size:clamp(24px,6vw,32px)!important;}
+ .header-controls {width:100%;}
+ .setup-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .setup-grid label:first-child,.setup-grid .create-trip {grid-column:1/-1!important;}
+ .trip-setup,.budget-card,.trip-countdown,.summary {padding:15px!important;}
+}
+@media(max-width:390px){.setup-grid{grid-template-columns:1fr!important}.setup-grid label{grid-column:1/-1!important}}
+
+/* V6: seamless curtain joins — no duplicate top corners */
+:root { --curtain-top-height: clamp(180px, 19vw, 335px); --curtain-gutter: clamp(55px, 6vw, 105px); }
+.theatre-curtain { background:none!important; }
+.curtain-top-art {
+  z-index: 3!important; top:0!important; left:0!important; right:0!important;
+  height:var(--curtain-top-height)!important;
+  background-image:url('../images/curtain-top-seamless.png')!important;
+  background-position:center top!important; background-size:100% 100%!important;
+}
+.curtain-left-art,.curtain-right-art {
+  z-index:2!important; top:calc(var(--curtain-top-height) - 2px)!important; bottom:0!important;
+  width:var(--curtain-gutter)!important; background-size:100% 100%!important;
+}
+.curtain-left-art {background-image:url('../images/curtain-left-extension.png')!important;}
+.curtain-right-art {background-image:url('../images/curtain-right-extension.png')!important;}
+.topbar {margin-top:calc(var(--curtain-top-height) + 12px)!important;}
+@media(max-width:700px){
+ :root {--curtain-top-height:80px;--curtain-gutter:0px;}
+ .curtain-left-art,.curtain-right-art{display:none!important;}
+ .curtain-top-art{height:80px!important;background-size:100% 100%!important;}
+ .topbar{margin:90px 10px 0!important;}
+}
+
+/* V7 — soft blended fabric transition, no visible rectangular seam */
+@media (min-width: 701px) {
+  .curtain-left-art,
+  .curtain-right-art {
+    top: calc(var(--curtain-top-height) - 105px) !important;
+    width: var(--curtain-gutter) !important;
+    background-position: center top !important;
+    background-size: 100% 100% !important;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 8px, rgba(0,0,0,.2) 30px, rgba(0,0,0,.75) 85px, #000 130px) !important;
+    mask-image: linear-gradient(to bottom, transparent 0, transparent 8px, rgba(0,0,0,.2) 30px, rgba(0,0,0,.75) 85px, #000 130px) !important;
+  }
+  .curtain-top-art {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,.98) 86%, transparent 100%) !important;
+    mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,.98) 86%, transparent 100%) !important;
+  }
+}
+
+
+/* V8: wardrobe must start BELOW fixed decorative valance */
+@media (min-width: 701px) {
+  #wardrobePage.wardrobe-page {
+    padding-top: calc(var(--curtain-top-height) + 28px) !important;
+    padding-left: calc(var(--curtain-gutter) + 18px) !important;
+    padding-right: calc(var(--curtain-gutter) + 18px) !important;
+  }
+  #wardrobePage .wardrobe-page-inner {max-width: 1500px !important;}
+}
+@media (max-width: 700px) {
+  #wardrobePage.wardrobe-page {
+    padding-top: calc(var(--curtain-top-height) + 18px) !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  #wardrobePage .wardrobe-page-actions {width:100%;}
+  #wardrobePage .wardrobe-page-actions .btn {flex:1 1 auto;}
+}
+#wardrobePage .wardrobe-page-head {position:relative; z-index:1;}
+#wardrobePage .wardrobe-days {scroll-margin-top:calc(var(--curtain-top-height) + 15px);}

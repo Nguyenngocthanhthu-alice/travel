@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trip Planner</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
@@ -13,32 +16,35 @@
 </head>
 
 <body>
+  <div class="theatre-curtain" aria-hidden="true"><div class="curtain-top-art"></div><div class="curtain-left-art"></div><div class="curtain-right-art"></div></div>
   <header class="topbar">
+    <div class="header-ornament" aria-hidden="true">✦ ♡ ✦</div>
     <div>
       <p class="eyebrow">PLAN • DRAG • GO</p>
-      <h1>✈ Trip Planner</h1>
-      <p class="subtitle">Sắp xếp chuyến đi theo cách của bạn.</p>
+      <h1>✧ Alice’s Trip Planner ✧</h1>
+      <p class="subtitle">A little adventure, wrapped in ribbons ♡</p>
     </div>
-    <div class="header-actions">
-      <button class="btn secondary" id="resetBtn">Tạo chuyến mới</button>
-      <button class="btn secondary" id="myTripsBtn">
-    ♡ Chuyến đi của tôi
-</button>
-
-<button class="btn outline" id="saveTripBtn">
-    Lưu chuyến đi
-</button>
-
-<button class="btn primary" id="newTripBtn">
-    ＋ Chuyến mới
-</button>
-      <button class="btn secondary hidden" id="wardrobeBtn" type="button">👗 Tủ đồ</button>
-      <button class="btn outline" id="excelBtn">Xuất Excel</button>
-      <button class="btn primary" id="pdfBtn">Xuất PDF</button>
+    <div class="header-controls">
+      <div class="header-actions" id="headerActions">
+        <div class="action-group action-group-main">
+          <button class="btn secondary" id="myTripsBtn">♡ Chuyến đi của tôi</button>
+          <button class="btn primary" id="saveTripBtn">✧ Lưu chuyến đi</button>
+          <button class="btn secondary hidden" id="wardrobeBtn" type="button">♧ Tủ đồ</button>
+        </div>
+        <div class="action-group action-group-extra">
+          <button class="btn outline" id="newTripBtn">＋ Chuyến mới</button>
+          <button class="btn outline" id="resetBtn">↻ Tạo lại</button>
+          <button class="btn outline" id="excelBtn">↓ Excel</button>
+          <button class="btn outline" id="pdfBtn">↓ PDF</button>
+        </div>
+      </div>
+      <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-controls="headerActions" aria-expanded="false">☰ <span>Tùy chọn</span></button>
     </div>
+
   </header>
 
   <main>
+    <div class="storybook-divider" aria-hidden="true">✧ ─── ♡ ─── ✧</div>
     <section class="trip-setup card">
       <div class="section-title">
         <div>
@@ -142,6 +148,7 @@
         <div><span>Tổng chi phí</span><strong id="costTotal">0 ₫</strong></div>
       </div>
     </section>
+    <div class="storybook-divider footer-divider" aria-hidden="true">✦ Made for lovely adventures ✦</div>
   </main>
 
   <div class="modal hidden" id="placeModal">
@@ -376,6 +383,18 @@
   <div class="toast" id="toast"></div>
 
   <script type="module" src="javascript/script.js"></script>
+<script>
+  (() => {
+    const toggle = document.getElementById('mobileMenuToggle');
+    const actions = document.getElementById('headerActions');
+    if (!toggle || !actions) return;
+    toggle.addEventListener('click', () => {
+      const open = actions.classList.toggle('mobile-open');
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.querySelector('span').textContent = open ? 'Thu gọn' : 'Tùy chọn';
+    });
+  })();
+</script>
 </body>
 
 </html>
